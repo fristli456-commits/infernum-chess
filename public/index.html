@@ -295,17 +295,17 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 3
   </div>
 
   <div class="lobby-tabs">
-    <div class="ltab active" id="tab-play-btn">ИГРА</div>
-    <div class="ltab" id="tab-openings-btn">ДЕБЮТЫ</div>
+    <div class="ltab active" id="tab-play" onclick="switchTab('play')">ИГРА</div>
+    <div class="ltab" id="tab-openings" onclick="switchTab('openings')">ДЕБЮТЫ</div>
   </div>
 
   <div class="tab-panel active" id="panel-play">
     <div class="cards">
-      <div class="card" id="card-create">
+      <div class="card" id="card-create" onclick="createRoom()">
         <div class="card-title">СОЗДАТЬ</div>
         <div class="card-desc">Открыть новую партию и пригласить соперника по коду</div>
       </div>
-      <div class="card" id="card-join">
+      <div class="card" id="card-join" onclick="joinRoom()">
         <div class="card-title">ВОЙТИ</div>
         <div class="card-desc">Ввести код комнаты и принять вызов противника</div>
       </div>
@@ -1328,8 +1328,7 @@ function initProfile() {
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initProfile);
 } else {
-  initProfile();
-}
+  }
 
 
 // ── Bind all onclick handlers safely ──
