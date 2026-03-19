@@ -1117,88 +1117,76 @@ resign = function() {
 
 
 
+
 // ══════════════════════════════════
-// PROFILE SYSTEM
+// PROFILE & FRIENDS SYSTEM
 // ══════════════════════════════════
 var currentProfile = null;
 
 function getProfile(name) {
+  if (!name) return null;
   var key = 'infernum_profile_' + name.toLowerCase().trim();
   var data = localStorage.getItem(key);
-  if (data) return JSON.parse(data);
-  return null;
+  return data ? JSON.parse(data) : null;
 }
 
-function saveProfile(profile) {
-  var key = 'infernum_profile_' + profile.name.toLowerCase().trim();
-  localStorage.setItem(key, JSON.stringify(profile));
-  localStorage.setItem('infernum_last_name', profile.name);
+function saveProfile(p) {
+  if (!p) return;
+  var key = 'infernum_profile_' + p.name.toLowerCase().trim();
+  localStorage.setItem(key, JSON.stringify(p));
+  localStorage.setItem('infernum_last_name', p.name);
 }
 
 function createProfile(name) {
-  return { name: name, wins: 0, losses: 0, draws: 0, total: 0, created: Date.now() };
-}
-
-function initProfile() {
-  var lastName = localStorage.getItem('infernum_last_name');
-  var overlay = document.getElementById('login-overlay');
-  if (lastName) {
-    var p = getProfile(lastName);
-    if (p) {
-      currentProfile = p;
-      applyProfile();
-      return;
-    }
-  }
-  // Show login
-  overlay.classList.add('open');
-  setTimeout(function(){ document.getElementById('login-name-input').focus(); }, 300);
-}
-
-function loginSubmit() {
-  var name = (document.getElementById('login-name-input').value || '').trim();
-  if (!name) { toast('ВВЕДИТЕ ИМЯ'); return; }
-  var existing = getProfile(name);
-  if (existing) {
-    currentProfile = existing;
-  } else {
-    currentProfile = createProfile(name);
-    saveProfile(currentProfile);
-  }
-  saveProfile(currentProfile);
-  document.getElementById('login-overlay').classList.remove('open');
-  applyProfile();
-  if (!existing) toast('✦ ДОБРО ПОЖАЛОВАТЬ, ' + name.toUpperCase() + '!');
-  else toast('С ВОЗВРАЩЕНИЕМ, ' + name.toUpperCase() + '!');
+  return { name: name, wins: 0, losses: 0, draws: 0, total: 0, friends: [], created: Date.now() };
 }
 
 function applyProfile() {
   if (!currentProfile) return;
-  document.getElementById('profile-name-display').textContent = currentProfile.name.toUpperCase();
-  // Pre-fill name in game creation modals
+  var btn = document.getElementById('profile-name-display');
+  if (btn) btn.textContent = currentProfile.name.toUpperCase();
   var cn = document.getElementById('cn');
   var jn = document.getElementById('jn');
   if (cn) cn.value = currentProfile.name;
   if (jn) jn.value = currentProfile.name;
 }
 
+function loginSubmit() {
+  var input = document.getElementById('login-name-input');
+  if (!input) return;
+  var name = input.value.trim();
+  if (!name) { toast('ВВЕДИТЕ ИМЯ'); return; }
+  var existing = getProfile(name);
+  currentProfile = existing || createProfile(name);
+  if (!currentProfile.friends) currentProfile.friends = [];
+  saveProfile(currentProfile);
+  var overlay = document.getElementById('login-overlay');
+  if (overlay) overlay.classList.remove('open');
+  applyProfile();
+  toast(existing ? 'С ВОЗВРАЩЕНИЕМ, ' + name.toUpperCase() + '!' : '✦ ДОБРО ПОЖАЛОВАТЬ, ' + name.toUpperCase() + '!');
+}
+
 function openProfileModal() {
   if (!currentProfile) return;
   document.getElementById('pm-name').textContent = currentProfile.name.toUpperCase();
-  document.getElementById('pm-wins').textContent = currentProfile.wins;
-  document.getElementById('pm-losses').textContent = currentProfile.losses;
-  document.getElementById('pm-draws').textContent = currentProfile.draws;
-  document.getElementById('pm-total').textContent = currentProfile.total;
+  document.getElementById('pm-wins').textContent = currentProfile.wins || 0;
+  document.getElementById('pm-losses').textContent = currentProfile.losses || 0;
+  document.getElementById('pm-draws').textContent = currentProfile.draws || 0;
+  document.getElementById('pm-total').textContent = currentProfile.total || 0;
   document.getElementById('pm-name-input').value = '';
+  renderFriendsList();
   document.getElementById('profile-overlay').classList.add('open');
 }
 
 function closeProfileModal() {
-  document.getElementById('profile-overlay').classList.remove('open');
+  var el = document.getElementById('profile-overlay');
+  if (el) el.classList.remove('open');
 }
 
 function changeNickname() {
-  var newName = (document.getElementById('pm-name-input').value || '').trim();
+  var input = document.getElementById('pm-name-input');
+  if (!input) return;
+  var newName = input.value.trim();
   if (!newName) { toast('ВВЕДИТЕ НОВОЕ ИМЯ'); return; }
   var existing = getProfile(newName);
   if (existing) {
@@ -1212,85 +1200,135 @@ function changeNickname() {
   toast('ИМЯ ИЗМЕНЕНО: ' + newName.toUpperCase());
 }
 
-// Login input: show "NEW PLAYER" badge if name not found
-document.getElementById('login-name-input').addEventListener('input', function() {
-  var name = this.value.trim();
-  var badge = document.getElementById('login-new-badge');
-  if (name.length >= 2) {
-    var exists = getProfile(name);
-    badge.style.display = exists ? 'none' : 'block';
-    document.getElementById('login-title').textContent = exists ? 'С ВОЗВРАЩЕНИЕМ' : 'ДОБРО ПОЖАЛОВАТЬ';
-    document.getElementById('login-sub').textContent = exists ? 'ВХОД В ПРОФИЛЬ' : 'НОВЫЙ ИГРОК';
-    document.getElementById('login-btn').textContent = exists ? 'ВОЙТИ' : 'СОЗДАТЬ АККАУНТ';
-  } else {
-    badge.style.display = 'none';
-    document.getElementById('login-title').textContent = 'ДОБРО ПОЖАЛОВАТЬ';
-    document.getElementById('login-sub').textContent = 'ВВЕДИТЕ ВАШ НИКНЕЙМ';
-    document.getElementById('login-btn').textContent = 'ВОЙТИ';
+// ── FRIENDS ──
+function addFriend() {
+  var input = document.getElementById('friend-input');
+  if (!input) return;
+  var name = input.value.trim();
+  if (!name) { toast('ВВЕДИТЕ ИМЯ'); return; }
+  if (name.toLowerCase() === currentProfile.name.toLowerCase()) { toast('ЭТО ВЫ!'); return; }
+  if (!currentProfile.friends) currentProfile.friends = [];
+  var already = currentProfile.friends.some(function(f){ return f.toLowerCase() === name.toLowerCase(); });
+  if (already) { toast('УЖЕ В ДРУЗЬЯХ'); return; }
+  var friendProfile = getProfile(name);
+  if (!friendProfile) { toast('ИГРОК НЕ НАЙДЕН'); return; }
+  currentProfile.friends.push(friendProfile.name);
+  saveProfile(currentProfile);
+  input.value = '';
+  renderFriendsList();
+  toast('✦ ' + name.toUpperCase() + ' ДОБАВЛЕН В ДРУЗЬЯ');
+}
+
+function removeFriend(name) {
+  if (!currentProfile.friends) return;
+  currentProfile.friends = currentProfile.friends.filter(function(f){ return f.toLowerCase() !== name.toLowerCase(); });
+  saveProfile(currentProfile);
+  renderFriendsList();
+  toast('УДАЛЁН ИЗ ДРУЗЕЙ');
+}
+
+function renderFriendsList() {
+  var list = document.getElementById('friends-list');
+  if (!list) return;
+  var friends = currentProfile.friends || [];
+  if (friends.length === 0) {
+    list.innerHTML = '<div style="font-size:12px;color:rgba(232,224,216,0.25);letter-spacing:2px;padding:12px 0;text-align:center;">НЕТ ДРУЗЕЙ</div>';
+    return;
   }
-});
+  list.innerHTML = '';
+  friends.forEach(function(name) {
+    var fp = getProfile(name);
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(192,57,43,0.08);';
+    var stats = fp ? (fp.wins + 'W / ' + fp.losses + 'L') : '—';
+    row.innerHTML = '<div style="display:flex;flex-direction:column;gap:2px">'
+      + '<span style="font-family:Bebas Neue,sans-serif;font-size:14px;letter-spacing:2px;color:#e74c3c">' + name.toUpperCase() + '</span>'
+      + '<span style="font-size:11px;color:rgba(232,224,216,0.3);letter-spacing:1px">' + stats + '</span>'
+      + '</div>'
+      + '<button onclick="removeFriend('' + name + '')" style="background:none;border:1px solid rgba(192,57,43,0.25);color:rgba(192,57,43,0.5);font-family:Bebas Neue,sans-serif;font-size:11px;letter-spacing:2px;padding:4px 10px;cursor:pointer;">УДАЛИТЬ</button>';
+    list.appendChild(row);
+  });
+}
 
-document.getElementById('login-name-input').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') loginSubmit();
-});
+// ── LOGIN INPUT LIVE UPDATE ──
+function setupLoginInput() {
+  var input = document.getElementById('login-name-input');
+  if (!input) return;
+  input.addEventListener('input', function() {
+    var name = this.value.trim();
+    var badge = document.getElementById('login-new-badge');
+    var title = document.getElementById('login-title');
+    var sub = document.getElementById('login-sub');
+    var btn = document.getElementById('login-btn');
+    if (!badge || !title || !sub || !btn) return;
+    if (name.length >= 2) {
+      var exists = getProfile(name);
+      badge.style.display = exists ? 'none' : 'block';
+      title.textContent = exists ? 'С ВОЗВРАЩЕНИЕМ' : 'ДОБРО ПОЖАЛОВАТЬ';
+      sub.textContent = exists ? 'ВХОД В ПРОФИЛЬ' : 'НОВЫЙ ИГРОК';
+      btn.textContent = exists ? 'ВОЙТИ' : 'СОЗДАТЬ АККАУНТ';
+    } else {
+      badge.style.display = 'none';
+      title.textContent = 'ДОБРО ПОЖАЛОВАТЬ';
+      sub.textContent = 'ВВЕДИТЕ ВАШ НИКНЕЙМ';
+      btn.textContent = 'ВОЙТИ';
+    }
+  });
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') loginSubmit();
+  });
+}
 
-// Profile overlay click outside to close
-document.getElementById('profile-overlay').addEventListener('click', function(e) {
-  if (e.target === this) closeProfileModal();
-});
+function setupProfileOverlayClose() {
+  var el = document.getElementById('profile-overlay');
+  if (el) el.addEventListener('click', function(e) {
+    if (e.target === this) closeProfileModal();
+  });
+}
 
-// Track game results
+// ── GAME RESULT TRACKING ──
 var _origEndGame = endGame;
 endGame = function(winner, reason) {
   _origEndGame(winner, reason);
-  if (currentProfile && myColor && reason !== 'stalemate') {
-    currentProfile.total++;
-    var myCol = myColor[0]; // 'w' or 'b'
+  if (currentProfile && myColor) {
+    currentProfile.total = (currentProfile.total || 0) + 1;
+    var myCol = myColor[0];
     if (reason === 'stalemate') {
-      currentProfile.draws++;
+      currentProfile.draws = (currentProfile.draws || 0) + 1;
     } else if (winner === myCol) {
-      currentProfile.wins++;
+      currentProfile.wins = (currentProfile.wins || 0) + 1;
     } else {
-      currentProfile.losses++;
+      currentProfile.losses = (currentProfile.losses || 0) + 1;
     }
     saveProfile(currentProfile);
   }
 };
 
-// Init on load
-initProfile();
+// ── INIT (wait for DOM) ──
+function initProfile() {
+  setupLoginInput();
+  setupProfileOverlayClose();
+  var lastName = localStorage.getItem('infernum_last_name');
+  if (lastName) {
+    var p = getProfile(lastName);
+    if (p) {
+      currentProfile = p;
+      if (!currentProfile.friends) currentProfile.friends = [];
+      applyProfile();
+      return;
+    }
+  }
+  var overlay = document.getElementById('login-overlay');
+  if (overlay) {
+    overlay.classList.add('open');
+    setTimeout(function(){ var i = document.getElementById('login-name-input'); if(i) i.focus(); }, 300);
+  }
+}
 
-</script
-<!-- LOGIN SCREEN -->
-<div id="login-screen">
-  <div class="login-box">
-    <div class="login-logo">INFERNUM</div>
-    <div class="login-sub">Королевская игра · 64 поля</div>
-    <div class="login-field">
-      <label>ВАШ ПСЕВДОНИМ</label>
-      <input id="login-input" placeholder="Введите имя..." maxlength="20" autocomplete="off" spellcheck="false">
-    </div>
-    <div class="login-status" id="login-status"></div>
-    <button class="btn btn-red" style="width:100%;font-size:16px;padding:14px;" onclick="doLogin()">ВОЙТИ В ИГРУ</button>
-    <div style="margin-top:16px;text-align:center;font-size:11px;color:rgba(192,57,43,0.3);letter-spacing:2px;">НАЖМИТЕ ENTER ИЛИ КНОПКУ</div>
-  </div>
-</div>
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initProfile);
+} else {
+  initProfile();
+}
 
-<!-- PROFILE MODAL -->
-<div class="overlay" id="profile-overlay">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal('profile-overlay')">✕</button>
-    <div class="modal-title">ПРОФИЛЬ</div>
-    <div class="field">
-      <label>ПСЕВДОНИМ</label>
-      <input id="profile-name-input" placeholder="Имя..." maxlength="20">
-    </div>
-    <div class="profile-stats">
-      <div class="stat-box"><span class="stat-val" id="stat-games">0</span><span class="stat-lbl">ПАРТИЙ</span></div>
-      <div class="stat-box"><span class="stat-val" id="stat-wins">0</span><span class="stat-lbl">ПОБЕД</span></div>
-      <div class="stat-box"><span class="stat-val" id="stat-losses">0</span><span class="stat-lbl">ПОРАЖЕНИЙ</span></div>
-    </div>
-    <button class="btn btn-red" style="width:100%" onclick="saveProfile()">СОХРАНИТЬ</button>
-  </div>
-</div>
 >
