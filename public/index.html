@@ -795,10 +795,10 @@ function updateCaptured(){const cw=document.getElementById('cap-w'),cb=document.
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
-function _localCreateRoom(){const name=document.getElementById('cn').value.trim()||'Белые';const col=document.getElementById('cc').value;G.pW=col==='black'?'Гость':name;G.pB=col==='white'?'Гость':name;G.roomCode=Math.random().toString(36).substring(2,6).toUpperCase();closeModal('c-overlay');document.getElementById('rcode').textContent=G.roomCode;openModal('w-overlay');}
+function createRoom(){const name=document.getElementById('cn').value.trim()||'Белые';const col=document.getElementById('cc').value;G.pW=col==='black'?'Гость':name;G.pB=col==='white'?'Гость':name;G.roomCode=Math.random().toString(36).substring(2,6).toUpperCase();closeModal('c-overlay');document.getElementById('rcode').textContent=G.roomCode;openModal('w-overlay');}
 function copyCode(){navigator.clipboard?.writeText(G.roomCode).then(()=>toast('КОД СКОПИРОВАН'));}
-function _localStartAsLocal(){closeModal('w-overlay');myColor=null;startGame({pW:document.getElementById('cn').value.trim()||'Белые',pB:'Чёрные'});}
-function _localJoinRoom(){const name=document.getElementById('jn').value.trim()||'Гость';const code=document.getElementById('jc').value.toUpperCase();if(code.length<4){toast('ВВЕДИТЕ КОД');return;}closeModal('j-overlay');toast('ПРИСОЕДИНЯЕМСЯ...');setTimeout(()=>{myColor=null;startGame({pW:'Белые',pB:name});toast('ЛОКАЛЬНЫЙ РЕЖИМ');},900);}
+function startAsLocal(){closeModal('w-overlay');startGame({pW:document.getElementById('cn').value.trim()||'Белые',pB:'Чёрные'});}
+function joinRoom(){const name=document.getElementById('jn').value.trim()||'Гость';const code=document.getElementById('jc').value.toUpperCase();if(code.length<4){toast('ВВЕДИТЕ КОД');return;}closeModal('j-overlay');toast('ПРИСОЕДИНЯЕМСЯ...');setTimeout(()=>{startGame({pW:'Белые',pB:name});toast('ЛОКАЛЬНЫЙ РЕЖИМ');},900);}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400);}
 
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
@@ -808,120 +808,133 @@ document.getElementById('jc').addEventListener('input',function(){this.value=thi
 // ══════════════════════════════════
 // WEBSOCKET CLIENT
 // ══════════════════════════════════
-var WS = null;
+var SOCK = null;
 var myColor = null;
 var wsConnected = false;
 var _creatorName = '';
 
-function wsConnect(cb){
-  if(WS && WS.readyState===WebSocket.OPEN){cb();return;}
-  var proto=location.protocol==='https:'?'wss:':'ws:';
-  WS=new WebSocket(proto+'//'+location.host);
-  WS.onopen=function(){wsConnected=true;cb();};
-  WS.onerror=function(){wsConnected=false;toast('Нет соединения');};
-  WS.onclose=function(){wsConnected=false;};
-  WS.onmessage=function(e){
-    var msg=JSON.parse(e.data);
-    if(msg.type==='created'){
-      myColor=msg.color;
-      document.getElementById('rcode').textContent=msg.code;
-      G.roomCode=msg.code;
-    } else if(msg.type==='start'){
-      myColor=msg.yourColor;
-      var myName=myColor==='white'?(_creatorName||document.getElementById('cn').value.trim()||'Белые'):(document.getElementById('jn').value.trim()||'Гость');
-      var oppName=msg.opponent||'Соперник';
-      var pW=myColor==='white'?myName:oppName;
-      var pB=myColor==='black'?myName:oppName;
-      document.querySelectorAll('.overlay').forEach(function(o){o.classList.remove('open');});
-      G.flipped=(myColor==='black');
-      startGame({pW:pW,pB:pB});
-      toast('⚔ '+oppName+' подключился!');
-    } else if(msg.type==='move'){
-      if(G.active&&myColor&&G.turn!==myColor[0]){
-        wsApplyMove(msg.from,msg.to,msg.promo||null);
+function wsConnect(onOpen) {
+  if (SOCK && SOCK.readyState === WebSocket.OPEN) { onOpen(); return; }
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  SOCK = new WebSocket(proto + '//' + location.host);
+  SOCK.onopen = function() { wsConnected = true; onOpen(); };
+  SOCK.onerror = function() { toast('Ошибка соединения'); wsConnected = false; };
+  SOCK.onclose = function() { wsConnected = false; SOCK = null; };
+  SOCK.onmessage = function(e) {
+    var msg = JSON.parse(e.data);
+    if (msg.type === 'created') {
+      myColor = msg.color;
+      document.getElementById('rcode').textContent = msg.code;
+      G.roomCode = msg.code;
+    }
+    else if (msg.type === 'start') {
+      myColor = msg.yourColor;
+      var myName = myColor === 'white'
+        ? (_creatorName || document.getElementById('cn').value.trim() || 'Белые')
+        : (document.getElementById('jn').value.trim() || 'Гость');
+      var oppName = msg.opponent || 'Соперник';
+      var pW = myColor === 'white' ? myName : oppName;
+      var pB = myColor === 'black' ? myName : oppName;
+      document.querySelectorAll('.overlay').forEach(function(o){ o.classList.remove('open'); });
+      startGame({ pW: pW, pB: pB, flipped: myColor === 'black' });
+      toast('⚔ ' + oppName + ' подключился!');
+    }
+    else if (msg.type === 'move') {
+      if (G.active && myColor && G.turn !== myColor[0]) {
+        wsApplyMove(msg.from, msg.to, msg.promo || null);
       }
-    } else if(msg.type==='opponent_resigned'){
+    }
+    else if (msg.type === 'opponent_resigned') {
       toast('Соперник сдался!');
-      endGame(myColor[0],'resign');
-    } else if(msg.type==='opponent_left'){
+      endGame(myColor[0], 'resign');
+    }
+    else if (msg.type === 'opponent_left') {
       toast('Соперник покинул игру');
-      G.active=false;clearInterval(G.interval);
-    } else if(msg.type==='error'){
+      G.active = false;
+      clearInterval(G.interval);
+    }
+    else if (msg.type === 'error') {
       toast(msg.msg);
     }
   };
 }
 
-function wsSend(data){
-  if(WS&&WS.readyState===WebSocket.OPEN)WS.send(JSON.stringify(data));
+function wsSend(data) {
+  if (SOCK && SOCK.readyState === WebSocket.OPEN) SOCK.send(JSON.stringify(data));
 }
 
-// Применить ход соперника без отправки в сеть
-function wsApplyMove(from,to,promo){
-  var p=G.board[from[0]][from[1]];if(!p)return;
-  if(p[1]==='P'&&!promo&&(to[0]===0||to[0]===7))promo='Q';
-  var res=applyMove(G.board,from,to,promo);
-  var nb=res.board,cap=res.cap;
-  if(p[1]==='K'){G.castle[p[0]+'K']=false;G.castle[p[0]+'Q']=false;}
-  if(p[1]==='R'){if(from[0]===7&&from[1]===7)G.castle.wK=false;if(from[0]===7&&from[1]===0)G.castle.wQ=false;if(from[0]===0&&from[1]===7)G.castle.bK=false;if(from[0]===0&&from[1]===0)G.castle.bQ=false;}
+// Применить ход соперника (без отправки в сеть)
+function wsApplyMove(from, to, promo) {
+  var p = G.board[from[0]][from[1]];
+  if (!p) return;
+  if (p[1]==='P' && !promo && (to[0]===0||to[0]===7)) promo='Q';
+  var res = applyMove(G.board, from, to, promo);
+  var nb = res.board, cap = res.cap;
+  if (p[1]==='K'){G.castle[p[0]+'K']=false;G.castle[p[0]+'Q']=false;}
+  if (p[1]==='R'){if(from[0]===7&&from[1]===7)G.castle.wK=false;if(from[0]===7&&from[1]===0)G.castle.wQ=false;if(from[0]===0&&from[1]===7)G.castle.bK=false;if(from[0]===0&&from[1]===0)G.castle.bQ=false;}
   G.ep=null;
   if(p[1]==='P'&&Math.abs(to[0]-from[0])===2)G.ep=[(from[0]+to[0])/2,from[1]];
   if(cap){(p[0]==='w'?G.capW:G.capB).push(cap);}
-  G.board=nb;G.lastMove={from:from,to:to};
+  G.board=nb; G.lastMove={from:from,to:to};
   addHist(buildNotation(p,from,to,cap,promo,nb),p[0]);
-  G.turn=p[0]==='w'?'b':'w';G.sel=null;G.hints=[];G.halfMove++;
-  var opMvs=allLegal(G.board,G.turn);G.inCheck=inCheck(G.board,G.turn);
+  G.turn=p[0]==='w'?'b':'w'; G.sel=null; G.hints=[]; G.halfMove++;
+  var opMvs=allLegal(G.board,G.turn); G.inCheck=inCheck(G.board,G.turn);
   if(opMvs.length===0){endGame(p[0],G.inCheck?'checkmate':'stalemate');render();updateUI();return;}
-  render();updateUI();
+  render(); updateUI();
 }
 
 // Переопределяем createRoom
-createRoom=function(){
-  _creatorName=document.getElementById('cn').value.trim()||'Белые';
-  var col=document.getElementById('cc').value;
-  myColor=null;G.roomCode=null;
-  document.getElementById('rcode').textContent='...';
-  closeModal('c-overlay');openModal('w-overlay');
-  wsConnect(function(){wsSend({type:'create',name:_creatorName,color:col});});
+createRoom = function() {
+  _creatorName = document.getElementById('cn').value.trim() || 'Белые';
+  var col = document.getElementById('cc').value;
+  myColor = null;
+  document.getElementById('rcode').textContent = '...';
+  closeModal('c-overlay');
+  openModal('w-overlay');
+  wsConnect(function() {
+    wsSend({ type:'create', name:_creatorName, color:col });
+  });
 };
 
 // Переопределяем joinRoom
-joinRoom=function(){
-  var name=document.getElementById('jn').value.trim()||'Гость';
-  var code=document.getElementById('jc').value.toUpperCase().trim();
-  if(code.length<4){toast('ВВЕДИТЕ КОД');return;}
+joinRoom = function() {
+  var name = document.getElementById('jn').value.trim() || 'Гость';
+  var code = document.getElementById('jc').value.toUpperCase().trim();
+  if (code.length < 4) { toast('ВВЕДИТЕ КОД'); return; }
   closeModal('j-overlay');
-  wsConnect(function(){wsSend({type:'join',name:name,code:code});});
+  wsConnect(function() {
+    wsSend({ type:'join', name:name, code:code });
+  });
 };
 
-// Локальная игра
-startAsLocal=function(){
+// Локальная игра без сервера
+startAsLocal = function() {
   closeModal('w-overlay');
-  myColor=null;
-  startGame({pW:_creatorName||document.getElementById('cn').value.trim()||'Белые',pB:'Чёрные'});
+  myColor = null;
+  var name = _creatorName || document.getElementById('cn').value.trim() || 'Белые';
+  startGame({ pW:name, pB:'Чёрные' });
 };
 
-// Перехватываем doMove — блокируем чужой ход и отправляем свой
-var _origDoMove=doMove;
-doMove=function(from,to,promo){
-  if(myColor&&wsConnected&&G.turn!==myColor[0])return;
-  if(myColor&&wsConnected){wsSend({type:'move',from:from,to:to,promo:promo||null});}
-  _origDoMove(from,to,promo);
+// Перехват doMove — блокировка чужого хода + отправка своего
+var _origDoMove = doMove;
+doMove = function(from, to, promo) {
+  if (myColor && wsConnected && G.turn !== myColor[0]) return;
+  if (myColor && wsConnected) wsSend({ type:'move', from:from, to:to, promo:promo||null });
+  _origDoMove(from, to, promo);
 };
 
-// Перехватываем handleClick — блокируем если не наш ход
-var _origHandleClick=handleClick;
-handleClick=function(r,c){
-  if(myColor&&wsConnected&&G.turn!==myColor[0])return;
-  _origHandleClick(r,c);
+// Перехват handleClick — блокировка если не наш ход
+var _origHandleClick = handleClick;
+handleClick = function(r, c) {
+  if (myColor && wsConnected && G.turn !== myColor[0]) return;
+  _origHandleClick(r, c);
 };
 
-// Перехватываем resign
-var _origResign=resign;
-resign=function(){
-  if(wsConnected)wsSend({type:'resign'});
+// Перехват resign — уведомить соперника
+var _origResign = resign;
+resign = function() {
+  if (wsConnected) wsSend({ type:'resign' });
   _origResign();
 };
+
 </script>
-</body>
-</html>
