@@ -806,7 +806,7 @@ document.getElementById('jc').addEventListener('input',function(){this.value=thi
 
 
 // ══════════════════════════════════
-// WEBSOCKET
+// WEBSOCKET CLIENT
 // ══════════════════════════════════
 var WS = null;
 var myColor = null;
@@ -828,18 +828,17 @@ function wsConnect(cb){
       G.roomCode=msg.code;
     } else if(msg.type==='start'){
       myColor=msg.yourColor;
-      var myName=myColor==='white'
-        ?(_creatorName||document.getElementById('cn').value.trim()||'Белые')
-        :(document.getElementById('jn').value.trim()||'Гость');
+      var myName=myColor==='white'?(_creatorName||document.getElementById('cn').value.trim()||'Белые'):(document.getElementById('jn').value.trim()||'Гость');
       var oppName=msg.opponent||'Соперник';
       var pW=myColor==='white'?myName:oppName;
       var pB=myColor==='black'?myName:oppName;
       document.querySelectorAll('.overlay').forEach(function(o){o.classList.remove('open');});
-      startGame({pW:pW,pB:pB,flipped:myColor==='black'});
+      G.flipped=(myColor==='black');
+      startGame({pW:pW,pB:pB});
       toast('⚔ '+oppName+' подключился!');
     } else if(msg.type==='move'){
       if(G.active&&myColor&&G.turn!==myColor[0]){
-        _netApplyMove(msg.from,msg.to,msg.promo||null);
+        wsApplyMove(msg.from,msg.to,msg.promo||null);
       }
     } else if(msg.type==='opponent_resigned'){
       toast('Соперник сдался!');
@@ -857,13 +856,16 @@ function wsSend(data){
   if(WS&&WS.readyState===WebSocket.OPEN)WS.send(JSON.stringify(data));
 }
 
-function _netApplyMove(from,to,promo){
+// Применить ход соперника без отправки в сеть
+function wsApplyMove(from,to,promo){
   var p=G.board[from[0]][from[1]];if(!p)return;
   if(p[1]==='P'&&!promo&&(to[0]===0||to[0]===7))promo='Q';
-  var res=applyMove(G.board,from,to,promo);var nb=res.board;var cap=res.cap;
+  var res=applyMove(G.board,from,to,promo);
+  var nb=res.board,cap=res.cap;
   if(p[1]==='K'){G.castle[p[0]+'K']=false;G.castle[p[0]+'Q']=false;}
   if(p[1]==='R'){if(from[0]===7&&from[1]===7)G.castle.wK=false;if(from[0]===7&&from[1]===0)G.castle.wQ=false;if(from[0]===0&&from[1]===7)G.castle.bK=false;if(from[0]===0&&from[1]===0)G.castle.bQ=false;}
-  G.ep=null;if(p[1]==='P'&&Math.abs(to[0]-from[0])===2)G.ep=[(from[0]+to[0])/2,from[1]];
+  G.ep=null;
+  if(p[1]==='P'&&Math.abs(to[0]-from[0])===2)G.ep=[(from[0]+to[0])/2,from[1]];
   if(cap){(p[0]==='w'?G.capW:G.capB).push(cap);}
   G.board=nb;G.lastMove={from:from,to:to};
   addHist(buildNotation(p,from,to,cap,promo,nb),p[0]);
@@ -873,30 +875,33 @@ function _netApplyMove(from,to,promo){
   render();updateUI();
 }
 
-// Заменяем функции на WS-версии
-function createRoom(){
+// Переопределяем createRoom
+createRoom=function(){
   _creatorName=document.getElementById('cn').value.trim()||'Белые';
   var col=document.getElementById('cc').value;
   myColor=null;G.roomCode=null;
   document.getElementById('rcode').textContent='...';
   closeModal('c-overlay');openModal('w-overlay');
   wsConnect(function(){wsSend({type:'create',name:_creatorName,color:col});});
-}
+};
 
-function joinRoom(){
+// Переопределяем joinRoom
+joinRoom=function(){
   var name=document.getElementById('jn').value.trim()||'Гость';
   var code=document.getElementById('jc').value.toUpperCase().trim();
   if(code.length<4){toast('ВВЕДИТЕ КОД');return;}
   closeModal('j-overlay');
   wsConnect(function(){wsSend({type:'join',name:name,code:code});});
-}
+};
 
-function startAsLocal(){
-  closeModal('w-overlay');myColor=null;
+// Локальная игра
+startAsLocal=function(){
+  closeModal('w-overlay');
+  myColor=null;
   startGame({pW:_creatorName||document.getElementById('cn').value.trim()||'Белые',pB:'Чёрные'});
-}
+};
 
-// Перехватываем doMove
+// Перехватываем doMove — блокируем чужой ход и отправляем свой
 var _origDoMove=doMove;
 doMove=function(from,to,promo){
   if(myColor&&wsConnected&&G.turn!==myColor[0])return;
@@ -904,7 +909,7 @@ doMove=function(from,to,promo){
   _origDoMove(from,to,promo);
 };
 
-// Перехватываем handleClick
+// Перехватываем handleClick — блокируем если не наш ход
 var _origHandleClick=handleClick;
 handleClick=function(r,c){
   if(myColor&&wsConnected&&G.turn!==myColor[0])return;
@@ -917,5 +922,6 @@ resign=function(){
   if(wsConnected)wsSend({type:'resign'});
   _origResign();
 };
-
 </script>
+</body>
+</html>
