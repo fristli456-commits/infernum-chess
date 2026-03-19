@@ -803,47 +803,50 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 document.getElementById('jc').addEventListener('input',function(){this.value=this.value.toUpperCase();});
+</script>
 
+<script>
 // ══════════════════════════════════
 // WEBSOCKET CLIENT
 // ══════════════════════════════════
-let WS = null;
+let _WS = null;
 let myColor = null;
 let wsConnected = false;
 
 function wsConnect(onOpen) {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   const url = proto + '//' + location.host;
-  WS = new WebSocket(url);
+  _WS = new WebSocket(url);
 
-  WS.onopen = () => {
+  _WS.onopen = () => {
     wsConnected = true;
     if (onOpen) onOpen();
   };
 
-  WS.onmessage = (e) => {
+  _WS.onmessage = (e) => {
     const msg = JSON.parse(e.data);
     switch (msg.type) {
       case 'created':
-        // Server confirmed room creation, show waiting modal with code
         document.getElementById('rcode').textContent = msg.code;
         G.roomCode = msg.code;
         myColor = msg.color;
         break;
 
       case 'start':
-        // Opponent joined — start the game
         myColor = msg.yourColor;
         closeModal('w-overlay');
-        const pW = myColor === 'white' ? (document.getElementById('cn').value.trim()||'Белые') : msg.opponent;
-        const pB = myColor === 'black' ? (document.getElementById('cn').value.trim()||document.getElementById('jn').value.trim()||'Чёрные') : msg.opponent;
+        const pW = myColor === 'white'
+          ? (document.getElementById('cn').value.trim() || 'Белые')
+          : msg.opponent;
+        const pB = myColor === 'black'
+          ? (document.getElementById('cn').value.trim() || document.getElementById('jn').value.trim() || 'Чёрные')
+          : msg.opponent;
         G.flipped = (myColor === 'black');
         startGame({ pW, pB, online: true });
         toast('Соперник подключился!');
         break;
 
       case 'move':
-        // Opponent made a move — apply it
         if (G.active && G.turn !== myColor[0]) {
           doMove(msg.from, msg.to, msg.promo || null);
         }
@@ -863,32 +866,20 @@ function wsConnect(onOpen) {
       case 'error':
         toast(msg.msg);
         break;
-
-      case 'chat':
-        toast(msg.from + ': ' + msg.msg);
-        break;
     }
   };
 
-  WS.onclose = () => {
-    wsConnected = false;
-    WS = null;
-  };
-
-  WS.onerror = () => {
-    toast('Ошибка соединения — локальный режим');
-    wsConnected = false;
-  };
+  _WS.onclose = () => { wsConnected = false; _WS = null; };
+  _WS.onerror = () => { toast('Ошибка соединения — локальный режим'); wsConnected = false; };
 }
 
 function wsSend(data) {
-  if (WS && WS.readyState === WebSocket.OPEN) {
-    WS.send(JSON.stringify(data));
+  if (_WS && _WS.readyState === WebSocket.OPEN) {
+    _WS.send(JSON.stringify(data));
   }
 }
 
-// Override createRoom to use WebSocket
-const _origCreateRoom = createRoom;
+// ── Override createRoom ──
 function createRoom() {
   const name = document.getElementById('cn').value.trim() || 'Белые';
   const col = document.getElementById('cc').value;
@@ -896,49 +887,41 @@ function createRoom() {
   G.roomCode = null;
   document.getElementById('rcode').textContent = '...';
   openModal('w-overlay');
-
-  wsConnect(() => {
-    wsSend({ type: 'create', name, color: col });
-  });
+  wsConnect(() => { wsSend({ type: 'create', name, color: col }); });
 }
 
-// Override joinRoom to use WebSocket
-const _origJoinRoom = joinRoom;
+// ── Override joinRoom ──
 function joinRoom() {
   const name = document.getElementById('jn').value.trim() || 'Гость';
   const code = document.getElementById('jc').value.toUpperCase().trim();
   if (code.length < 4) { toast('ВВЕДИТЕ КОД'); return; }
-
-  wsConnect(() => {
-    wsSend({ type: 'join', name, code });
-  });
+  wsConnect(() => { wsSend({ type: 'join', name, code }); });
 }
 
-// Override startAsLocal to bypass WS
+// ── Override startAsLocal ──
 function startAsLocal() {
   closeModal('w-overlay');
   const name = document.getElementById('cn').value.trim() || 'Белые';
-  myColor = null; // local mode
+  myColor = null;
   startGame({ pW: name, pB: 'Чёрные' });
 }
 
-// Patch doMove to send moves online
+// ── Patch doMove to send moves online ──
 const _origDoMove = doMove;
 function doMove(from, to, promo) {
-  // If it's our turn in online game, send to server
   if (G.active && myColor && G.turn === myColor[0] && wsConnected) {
     wsSend({ type: 'move', from, to, promo: promo || null });
   }
   _origDoMove(from, to, promo);
 }
 
-// Patch resign to notify server
+// ── Patch resign ──
 const _origResign = resign;
 function resign() {
   if (wsConnected) wsSend({ type: 'resign' });
   _origResign();
 }
-
 </script>
+
 </body>
 </html>
