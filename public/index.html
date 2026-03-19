@@ -795,17 +795,15 @@ function updateCaptured(){const cw=document.getElementById('cap-w'),cb=document.
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
-function createRoom(){const name=document.getElementById('cn').value.trim()||'Белые';const col=document.getElementById('cc').value;G.pW=col==='black'?'Гость':name;G.pB=col==='white'?'Гость':name;G.roomCode=Math.random().toString(36).substring(2,6).toUpperCase();closeModal('c-overlay');document.getElementById('rcode').textContent=G.roomCode;openModal('w-overlay');}
+function createRoom_local(){const name=document.getElementById('cn').value.trim()||'Белые';const col=document.getElementById('cc').value;G.pW=col==='black'?'Гость':name;G.pB=col==='white'?'Гость':name;G.roomCode=Math.random().toString(36).substring(2,6).toUpperCase();closeModal('c-overlay');document.getElementById('rcode').textContent=G.roomCode;openModal('w-overlay');}
 function copyCode(){navigator.clipboard?.writeText(G.roomCode).then(()=>toast('КОД СКОПИРОВАН'));}
-function startAsLocal(){closeModal('w-overlay');startGame({pW:document.getElementById('cn').value.trim()||'Белые',pB:'Чёрные'});}
-function joinRoom(){const name=document.getElementById('jn').value.trim()||'Гость';const code=document.getElementById('jc').value.toUpperCase();if(code.length<4){toast('ВВЕДИТЕ КОД');return;}closeModal('j-overlay');toast('ПРИСОЕДИНЯЕМСЯ...');setTimeout(()=>{startGame({pW:'Белые',pB:name});toast('ЛОКАЛЬНЫЙ РЕЖИМ');},900);}
+function startAsLocal_local(){closeModal('w-overlay');startGame({pW:document.getElementById('cn').value.trim()||'Белые',pB:'Чёрные'});}
+function joinRoom_local(){const name=document.getElementById('jn').value.trim()||'Гость';const code=document.getElementById('jc').value.toUpperCase();if(code.length<4){toast('ВВЕДИТЕ КОД');return;}closeModal('j-overlay');toast('ПРИСОЕДИНЯЕМСЯ...');setTimeout(()=>{startGame({pW:'Белые',pB:name});toast('ЛОКАЛЬНЫЙ РЕЖИМ');},900);}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400);}
 
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 document.getElementById('jc').addEventListener('input',function(){this.value=this.value.toUpperCase();});
-</script>
 
-<script>
 // ══════════════════════════════════
 // WEBSOCKET CLIENT
 // ══════════════════════════════════
@@ -878,7 +876,7 @@ function wsSend(data){
 }
 
 // ── Переопределяем createRoom ──
-function createRoom(){
+createRoom = function(){
   _creatorName = document.getElementById('cn').value.trim() || 'Белые';
   const col = document.getElementById('cc').value;
   myColor = null;
@@ -892,7 +890,7 @@ function createRoom(){
 }
 
 // ── Переопределяем joinRoom ──
-function joinRoom(){
+joinRoom = function(){
   const name = document.getElementById('jn').value.trim() || 'Гость';
   const code = document.getElementById('jc').value.toUpperCase().trim();
   if(code.length < 4){ toast('ВВЕДИТЕ КОД'); return; }
@@ -903,7 +901,7 @@ function joinRoom(){
 }
 
 // ── Локальная игра ──
-function startAsLocal(){
+startAsLocal = function(){
   closeModal('w-overlay');
   myColor = null;
   const name = _creatorName || document.getElementById('cn').value.trim() || 'Белые';
@@ -934,7 +932,7 @@ function _applyMove(from, to, promo){
 
 // ── Перехватываем doMove — отправляем свой ход в сеть ──
 const _origDoMove = doMove;
-function doMove(from, to, promo){
+doMove = function(from, to, promo){
   // Блокируем ход если онлайн и сейчас не наш ход
   if(myColor && wsConnected && G.turn !== myColor[0]) return;
   // Отправляем ход сопернику
@@ -946,14 +944,14 @@ function doMove(from, to, promo){
 
 // ── Перехватываем resign ──
 const _origResign = resign;
-function resign(){
+resign = function(){
   if(wsConnected) wsSend({ type:'resign' });
   _origResign();
 }
 
 // ── handleClick: блокируем клик если не наш ход ──
 const _origHandleClick = handleClick;
-function handleClick(r,c){
+handleClick = function(r,c){
   if(myColor && wsConnected && G.turn !== myColor[0]) return;
   _origHandleClick(r,c);
 }
