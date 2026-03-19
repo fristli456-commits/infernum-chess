@@ -723,7 +723,7 @@ function legal(board,r,c){const p=board[r][c];if(!p)return[];const col=p[0];retu
 function allLegal(board,col){const all=[];for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(board[r][c]?.[0]===col)legal(board,r,c).forEach(m=>all.push({from:[r,c],to:m}));return all;}
 
 function startGame(opts={}){
-  G.board=initBoard();G.turn='w';G.sel=null;G.hints=[];G.hist=[];G.capW=[];G.capB=[];G.ep=null;G.castle={wK:true,wQ:true,bK:true,bQ:true};G.lastMove=null;G.inCheck=false;G.timers={w:600,b:600};G.active=true;G.halfMove=0;G.flipped=false;
+  G.board=initBoard();G.turn='w';G.sel=null;G.hints=[];G.hist=[];G.capW=[];G.capB=[];G.ep=null;G.castle={wK:true,wQ:true,bK:true,bQ:true};G.lastMove=null;G.inCheck=false;G.timers={w:600,b:600};G.active=true;G.halfMove=0;G.flipped=opts.flipped||false;
   if(opts.pW)G.pW=opts.pW;if(opts.pB)G.pB=opts.pB;
   clearInterval(G.interval);G.interval=setInterval(tick,1000);
   document.getElementById('nm-w').textContent=G.pW;document.getElementById('nm-b').textContent=G.pB;
@@ -809,52 +809,55 @@ document.getElementById('jc').addEventListener('input',function(){this.value=thi
 // ══════════════════════════════════
 // WEBSOCKET CLIENT
 // ══════════════════════════════════
-let _WS = null;
-let myColor = null;
+let WS = null;
+let myColor = null;  // 'white' | 'black' | null (local)
 let wsConnected = false;
+let _creatorName = '';
 
 function wsConnect(onOpen) {
+  if(WS && WS.readyState === WebSocket.OPEN){ onOpen(); return; }
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const url = proto + '//' + location.host;
-  _WS = new WebSocket(url);
-
-  _WS.onopen = () => {
-    wsConnected = true;
-    if (onOpen) onOpen();
-  };
-
-  _WS.onmessage = (e) => {
+  WS = new WebSocket(proto + '//' + location.host);
+  WS.onopen = () => { wsConnected = true; onOpen(); };
+  WS.onerror = () => { toast('Ошибка соединения — локальный режим'); wsConnected = false; };
+  WS.onclose = () => { wsConnected = false; };
+  WS.onmessage = (e) => {
     const msg = JSON.parse(e.data);
-    switch (msg.type) {
+    switch(msg.type) {
+
       case 'created':
+        // Сервер подтвердил создание комнаты
+        myColor = msg.color;
         document.getElementById('rcode').textContent = msg.code;
         G.roomCode = msg.code;
-        myColor = msg.color;
         break;
 
-      case 'start':
+      case 'start': {
+        // Второй игрок подключился — начинаем игру
         myColor = msg.yourColor;
-        closeModal('w-overlay');
-        const pW = myColor === 'white'
-          ? (document.getElementById('cn').value.trim() || 'Белые')
-          : msg.opponent;
-        const pB = myColor === 'black'
-          ? (document.getElementById('cn').value.trim() || document.getElementById('jn').value.trim() || 'Чёрные')
-          : msg.opponent;
-        G.flipped = (myColor === 'black');
-        startGame({ pW, pB, online: true });
-        toast('Соперник подключился!');
+        const myName = myColor === 'white'
+          ? (_creatorName || document.getElementById('cn').value.trim() || 'Белые')
+          : (document.getElementById('jn').value.trim() || 'Гость');
+        const oppName = msg.opponent || 'Соперник';
+        const pW = myColor === 'white' ? myName : oppName;
+        const pB = myColor === 'black' ? myName : oppName;
+        // Закрываем все модалки
+        document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('open'));
+        startGame({ pW, pB, flipped: myColor === 'black' });
+        toast('⚔ ' + oppName + ' подключился!');
         break;
+      }
 
       case 'move':
-        if (G.active && G.turn !== myColor[0]) {
-          doMove(msg.from, msg.to, msg.promo || null);
+        // Ход соперника — применяем только если сейчас НЕ наш ход
+        if(G.active && myColor && G.turn !== myColor[0]){
+          _applyMove(msg.from, msg.to, msg.promo || null);
         }
         break;
 
       case 'opponent_resigned':
-        endGame(myColor[0], 'resign');
         toast('Соперник сдался!');
+        endGame(myColor[0], 'resign');
         break;
 
       case 'opponent_left':
@@ -868,60 +871,91 @@ function wsConnect(onOpen) {
         break;
     }
   };
-
-  _WS.onclose = () => { wsConnected = false; _WS = null; };
-  _WS.onerror = () => { toast('Ошибка соединения — локальный режим'); wsConnected = false; };
 }
 
-function wsSend(data) {
-  if (_WS && _WS.readyState === WebSocket.OPEN) {
-    _WS.send(JSON.stringify(data));
-  }
+function wsSend(data){
+  if(WS && WS.readyState === WebSocket.OPEN) WS.send(JSON.stringify(data));
 }
 
-// ── Override createRoom ──
-function createRoom() {
-  const name = document.getElementById('cn').value.trim() || 'Белые';
+// ── Переопределяем createRoom ──
+function createRoom(){
+  _creatorName = document.getElementById('cn').value.trim() || 'Белые';
   const col = document.getElementById('cc').value;
-  G.pW = name; G.pB = 'Чёрные';
+  myColor = null;
   G.roomCode = null;
   document.getElementById('rcode').textContent = '...';
+  closeModal('c-overlay');
   openModal('w-overlay');
-  wsConnect(() => { wsSend({ type: 'create', name, color: col }); });
+  wsConnect(() => {
+    wsSend({ type:'create', name:_creatorName, color:col });
+  });
 }
 
-// ── Override joinRoom ──
-function joinRoom() {
+// ── Переопределяем joinRoom ──
+function joinRoom(){
   const name = document.getElementById('jn').value.trim() || 'Гость';
   const code = document.getElementById('jc').value.toUpperCase().trim();
-  if (code.length < 4) { toast('ВВЕДИТЕ КОД'); return; }
-  wsConnect(() => { wsSend({ type: 'join', name, code }); });
+  if(code.length < 4){ toast('ВВЕДИТЕ КОД'); return; }
+  closeModal('j-overlay');
+  wsConnect(() => {
+    wsSend({ type:'join', name, code });
+  });
 }
 
-// ── Override startAsLocal ──
-function startAsLocal() {
+// ── Локальная игра ──
+function startAsLocal(){
   closeModal('w-overlay');
-  const name = document.getElementById('cn').value.trim() || 'Белые';
   myColor = null;
-  startGame({ pW: name, pB: 'Чёрные' });
+  const name = _creatorName || document.getElementById('cn').value.trim() || 'Белые';
+  startGame({ pW:name, pB:'Чёрные' });
 }
 
-// ── Patch doMove to send moves online ──
+// ── Внутренняя функция применения хода (без отправки в сеть) ──
+function _applyMove(from, to, promo){
+  const p = G.board[from[0]][from[1]];
+  if(!p) return;
+  if(p[1]==='P' && !promo && (to[0]===0||to[0]===7)){
+    // Авто-промоция в ферзя для хода соперника
+    promo = 'Q';
+  }
+  const {board:nb,cap} = applyMove(G.board,from,to,promo);
+  if(p[1]==='K'){G.castle[p[0]+'K']=false;G.castle[p[0]+'Q']=false;}
+  if(p[1]==='R'){if(from[0]===7&&from[1]===7)G.castle.wK=false;if(from[0]===7&&from[1]===0)G.castle.wQ=false;if(from[0]===0&&from[1]===7)G.castle.bK=false;if(from[0]===0&&from[1]===0)G.castle.bQ=false;}
+  G.ep=null;
+  if(p[1]==='P'&&Math.abs(to[0]-from[0])===2)G.ep=[(from[0]+to[0])/2,from[1]];
+  if(cap){(p[0]==='w'?G.capW:G.capB).push(cap);}
+  G.board=nb; G.lastMove={from,to};
+  addHist(buildNotation(p,from,to,cap,promo,nb),p[0]);
+  G.turn=p[0]==='w'?'b':'w'; G.sel=null; G.hints=[]; G.halfMove++;
+  const opMvs=allLegal(G.board,G.turn); G.inCheck=inCheck(G.board,G.turn);
+  if(opMvs.length===0){endGame(p[0],G.inCheck?'checkmate':'stalemate');render();updateUI();return;}
+  render(); updateUI();
+}
+
+// ── Перехватываем doMove — отправляем свой ход в сеть ──
 const _origDoMove = doMove;
-function doMove(from, to, promo) {
-  if (G.active && myColor && G.turn === myColor[0] && wsConnected) {
-    wsSend({ type: 'move', from, to, promo: promo || null });
+function doMove(from, to, promo){
+  // Блокируем ход если онлайн и сейчас не наш ход
+  if(myColor && wsConnected && G.turn !== myColor[0]) return;
+  // Отправляем ход сопернику
+  if(myColor && wsConnected){
+    wsSend({ type:'move', from, to, promo: promo||null });
   }
   _origDoMove(from, to, promo);
 }
 
-// ── Patch resign ──
+// ── Перехватываем resign ──
 const _origResign = resign;
-function resign() {
-  if (wsConnected) wsSend({ type: 'resign' });
+function resign(){
+  if(wsConnected) wsSend({ type:'resign' });
   _origResign();
 }
-</script>
 
-</body>
-</html>
+// ── handleClick: блокируем клик если не наш ход ──
+const _origHandleClick = handleClick;
+function handleClick(r,c){
+  if(myColor && wsConnected && G.turn !== myColor[0]) return;
+  _origHandleClick(r,c);
+}
+
+</script>
