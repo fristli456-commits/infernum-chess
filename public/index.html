@@ -54,7 +54,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 3
 .card::after{content:'';position:absolute;top:0;right:0;width:16px;height:16px;background:var(--red);clip-path:polygon(100% 0,0 0,100% 100%);opacity:0.4;transition:opacity 0.3s;}
 .card:hover{border-color:var(--red);transform:translateY(-4px);box-shadow:0 12px 40px rgba(192,57,43,0.2);}
 .card:hover::before{opacity:1;}.card:hover::after{opacity:1;}
-.card-icon{font-size:40px;display:block;margin-bottom:16px;}
+.card-icon{display:none;}
 .card-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;color:var(--red-bright);margin-bottom:8px;}
 .card-desc{font-size:13px;font-weight:300;color:var(--text-dim);line-height:1.6;}
 
@@ -236,6 +236,40 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 3
 @media(max-width:840px){:root{--sq:44px;--osq:38px}.side,.hbox{display:none}.glayout{flex-direction:column}}
 @media(max-width:520px){:root{--sq:38px;--osq:32px}.bshell{padding:10px}.pinfo{min-width:120px;padding:10px 12px}.ptimer{font-size:20px}}
 
+
+/* Profile & Login */
+.profile-modal-overlay{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.92);backdrop-filter:blur(12px);align-items:center;justify-content:center;flex-direction:column;gap:0;}
+.profile-modal-overlay.open{display:flex;animation:fadeUp 0.4s ease;}
+.profile-modal{background:#161616;border:1px solid rgba(192,57,43,0.4);padding:48px 44px;max-width:440px;width:90%;position:relative;clip-path:polygon(0 0,calc(100% - 24px) 0,100% 24px,100% 100%,24px 100%,0 calc(100% - 24px));}
+.profile-modal::before{content:'';position:absolute;top:0;right:0;width:24px;height:24px;background:#c0392b;clip-path:polygon(100% 0,0 0,100% 100%);opacity:0.7;}
+.profile-modal-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:5px;color:#e74c3c;margin-bottom:8px;}
+.profile-modal-sub{font-size:13px;color:rgba(232,224,216,0.4);letter-spacing:2px;margin-bottom:28px;}
+.profile-stat{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(192,57,43,0.1);}
+.profile-stat-label{font-size:12px;letter-spacing:2px;color:rgba(232,224,216,0.4);}
+.profile-stat-value{font-family:'Bebas Neue',sans-serif;font-size:18px;color:#e74c3c;letter-spacing:2px;}
+.profile-new-badge{display:inline-block;font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:3px;color:#c0392b;border:1px solid rgba(192,57,43,0.4);padding:3px 10px;margin-bottom:20px;clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);}
+
+/* LOGIN SCREEN */
+#login-screen{position:fixed;inset:0;z-index:1000;background:var(--black);display:flex;align-items:center;justify-content:center;animation:fadeUp 0.5s ease;}
+.login-box{background:var(--black-card);border:1px solid rgba(192,57,43,0.4);padding:52px 48px;max-width:420px;width:90%;position:relative;clip-path:polygon(0 0,calc(100% - 28px) 0,100% 28px,100% 100%,28px 100%,0 calc(100% - 28px));}
+.login-box::before{content:'';position:absolute;top:0;right:0;width:28px;height:28px;background:var(--red);clip-path:polygon(100% 0,0 0,100% 100%);opacity:0.7;}
+.login-logo{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:8px;color:var(--red-bright);text-shadow:0 0 40px var(--red-glow);text-align:center;margin-bottom:6px;}
+.login-sub{font-size:11px;letter-spacing:6px;color:var(--text-dim);text-align:center;margin-bottom:36px;text-transform:uppercase;}
+.login-field{display:flex;flex-direction:column;gap:8px;margin-bottom:24px;}
+.login-field label{font-size:11px;font-weight:700;letter-spacing:3px;color:rgba(192,57,43,0.6);}
+.login-field input{background:rgba(255,255,255,0.03);border:1px solid rgba(192,57,43,0.25);padding:14px 18px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:600;outline:none;transition:border-color 0.25s;width:100%;letter-spacing:2px;}
+.login-field input:focus{border-color:var(--red);}
+.login-field input::placeholder{color:var(--text-dim);}
+.login-status{font-size:12px;letter-spacing:2px;min-height:18px;margin-bottom:16px;text-align:center;}
+.login-status.new{color:rgba(192,57,43,0.6);}
+.login-status.returning{color:#4caf50;letter-spacing:2px;}
+
+/* PROFILE MODAL */
+#profile-overlay .modal{min-width:340px;}
+.profile-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:20px 0;}
+.stat-box{background:rgba(192,57,43,0.05);border:1px solid rgba(192,57,43,0.15);padding:14px 10px;text-align:center;}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--red-bright);display:block;}
+.stat-lbl{font-size:10px;letter-spacing:2px;color:var(--text-dim);}
 </style>
 </head>
 <body>
@@ -243,7 +277,13 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 3
 <header>
   <div class="logo">INFERNUM <em>♟</em></div>
   <div class="pill">CHESS ROYAL</div>
-  <div style="font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:3px;color:rgba(192,57,43,0.3);">MMXXVI</div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:3px;color:rgba(192,57,43,0.3);">MMXXVI</div>
+    <div id="profile-btn" onclick="openProfileModal()" style="display:flex;align-items:center;gap:8px;cursor:pointer;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.3);padding:6px 14px;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);transition:all 0.2s;" onmouseover="this.style.borderColor='#c0392b'" onmouseout="this.style.borderColor='rgba(192,57,43,0.3)'">
+      <span style="font-size:16px">♟</span>
+      <span id="profile-name-display" style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:2px;color:#e74c3c;">ИГРОК</span>
+    </div>
+  </div>
 </header>
 
 <!-- LOBBY -->
@@ -262,12 +302,10 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 3
   <div class="tab-panel active" id="panel-play">
     <div class="cards">
       <div class="card" onclick="openModal('c-overlay')">
-        <span class="card-icon">⚔</span>
         <div class="card-title">СОЗДАТЬ</div>
         <div class="card-desc">Открыть новую партию и пригласить соперника по коду</div>
       </div>
       <div class="card" onclick="openModal('j-overlay')">
-        <span class="card-icon">🩸</span>
         <div class="card-title">ВОЙТИ</div>
         <div class="card-desc">Ввести код комнаты и принять вызов противника</div>
       </div>
@@ -806,6 +844,146 @@ document.getElementById('jc').addEventListener('input',function(){this.value=thi
 
 
 // ══════════════════════════════════
+// PROFILE & LOCAL STORAGE
+// ══════════════════════════════════
+var currentProfile = null;
+
+function loadProfile(name) {
+  var key = 'infernum_profile_' + name.toLowerCase().trim();
+  var data = localStorage.getItem(key);
+  if (data) {
+    return JSON.parse(data);
+  }
+  return { name: name, games: 0, wins: 0, losses: 0, created: Date.now() };
+}
+
+function saveProfileData(profile) {
+  var key = 'infernum_profile_' + profile.name.toLowerCase().trim();
+  localStorage.setItem(key, JSON.stringify(profile));
+  localStorage.setItem('infernum_last_player', profile.name);
+}
+
+function profileExists(name) {
+  var key = 'infernum_profile_' + name.toLowerCase().trim();
+  return !!localStorage.getItem(key);
+}
+
+function updateProfileDisplay() {
+  if (!currentProfile) return;
+  var el = document.getElementById('profile-name-display');
+  if (el) el.textContent = currentProfile.name.toUpperCase();
+  document.getElementById('stat-games').textContent = currentProfile.games || 0;
+  document.getElementById('stat-wins').textContent = currentProfile.wins || 0;
+  document.getElementById('stat-losses').textContent = currentProfile.losses || 0;
+}
+
+function doLogin() {
+  var name = document.getElementById('login-input').value.trim();
+  if (!name || name.length < 1) {
+    document.getElementById('login-status').textContent = 'ВВЕДИТЕ ИМЯ';
+    document.getElementById('login-status').className = 'login-status new';
+    return;
+  }
+  currentProfile = loadProfile(name);
+  saveProfileData(currentProfile);
+  updateProfileDisplay();
+  // Hide login screen
+  var ls = document.getElementById('login-screen');
+  ls.style.opacity = '0';
+  ls.style.transition = 'opacity 0.4s';
+  setTimeout(function() { ls.style.display = 'none'; }, 400);
+}
+
+function openProfileModal() {
+  if (!currentProfile) return;
+  document.getElementById('profile-name-input').value = currentProfile.name;
+  document.getElementById('stat-games').textContent = currentProfile.games || 0;
+  document.getElementById('stat-wins').textContent = currentProfile.wins || 0;
+  document.getElementById('stat-losses').textContent = currentProfile.losses || 0;
+  openModal('profile-overlay');
+}
+
+function saveProfile() {
+  var newName = document.getElementById('profile-name-input').value.trim();
+  if (!newName) return;
+  // If name changed, create new profile (keep old one)
+  if (newName.toLowerCase() !== currentProfile.name.toLowerCase()) {
+    currentProfile.name = newName;
+  }
+  saveProfileData(currentProfile);
+  updateProfileDisplay();
+  closeModal('profile-overlay');
+  toast('ПРОФИЛЬ СОХРАНЁН');
+}
+
+// Check login-input for Enter key
+document.addEventListener('DOMContentLoaded', function() {
+  var li = document.getElementById('login-input');
+  if (li) {
+    li.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') doLogin();
+    });
+    li.addEventListener('input', function() {
+      var name = li.value.trim();
+      var st = document.getElementById('login-status');
+      if (!name) { st.textContent = ''; return; }
+      if (profileExists(name)) {
+        var p = loadProfile(name);
+        st.textContent = '👑 ДОБРО ПОЖАЛОВАТЬ НАЗАД · ' + (p.games||0) + ' ПАРТИЙ';
+        st.className = 'login-status returning';
+      } else {
+        st.textContent = '✦ НОВЫЙ ИГРОК';
+        st.className = 'login-status new';
+      }
+    });
+    // Pre-fill last player
+    var last = localStorage.getItem('infernum_last_player');
+    if (last) {
+      li.value = last;
+      li.dispatchEvent(new Event('input'));
+    }
+    li.focus();
+  }
+});
+
+// Track game results in profile
+var _origEndGame = endGame;
+endGame = function(winner, reason) {
+  if (currentProfile && reason !== 'stalemate') {
+    currentProfile.games = (currentProfile.games || 0) + 1;
+    // Determine if we won or lost
+    // myColor is 'white'/'black' or null (local)
+    if (myColor) {
+      if (winner === myColor[0]) {
+        currentProfile.wins = (currentProfile.wins || 0) + 1;
+      } else {
+        currentProfile.losses = (currentProfile.losses || 0) + 1;
+      }
+    }
+    saveProfileData(currentProfile);
+    updateProfileDisplay();
+  }
+  _origEndGame(winner, reason);
+};
+
+// Auto-fill name in create/join modals from profile
+var _origOpenModal = openModal;
+openModal = function(id) {
+  _origOpenModal(id);
+  if (currentProfile) {
+    if (id === 'c-overlay') {
+      var cn = document.getElementById('cn');
+      if (cn && !cn.value) cn.value = currentProfile.name;
+    }
+    if (id === 'j-overlay') {
+      var jn = document.getElementById('jn');
+      if (jn && !jn.value) jn.value = currentProfile.name;
+    }
+  }
+};
+
+
+// ══════════════════════════════════
 // WEBSOCKET CLIENT
 // ══════════════════════════════════
 var SOCK = null;
@@ -937,4 +1115,182 @@ resign = function() {
   _origResign();
 };
 
-</script>
+
+
+// ══════════════════════════════════
+// PROFILE SYSTEM
+// ══════════════════════════════════
+var currentProfile = null;
+
+function getProfile(name) {
+  var key = 'infernum_profile_' + name.toLowerCase().trim();
+  var data = localStorage.getItem(key);
+  if (data) return JSON.parse(data);
+  return null;
+}
+
+function saveProfile(profile) {
+  var key = 'infernum_profile_' + profile.name.toLowerCase().trim();
+  localStorage.setItem(key, JSON.stringify(profile));
+  localStorage.setItem('infernum_last_name', profile.name);
+}
+
+function createProfile(name) {
+  return { name: name, wins: 0, losses: 0, draws: 0, total: 0, created: Date.now() };
+}
+
+function initProfile() {
+  var lastName = localStorage.getItem('infernum_last_name');
+  var overlay = document.getElementById('login-overlay');
+  if (lastName) {
+    var p = getProfile(lastName);
+    if (p) {
+      currentProfile = p;
+      applyProfile();
+      return;
+    }
+  }
+  // Show login
+  overlay.classList.add('open');
+  setTimeout(function(){ document.getElementById('login-name-input').focus(); }, 300);
+}
+
+function loginSubmit() {
+  var name = (document.getElementById('login-name-input').value || '').trim();
+  if (!name) { toast('ВВЕДИТЕ ИМЯ'); return; }
+  var existing = getProfile(name);
+  if (existing) {
+    currentProfile = existing;
+  } else {
+    currentProfile = createProfile(name);
+    saveProfile(currentProfile);
+  }
+  saveProfile(currentProfile);
+  document.getElementById('login-overlay').classList.remove('open');
+  applyProfile();
+  if (!existing) toast('✦ ДОБРО ПОЖАЛОВАТЬ, ' + name.toUpperCase() + '!');
+  else toast('С ВОЗВРАЩЕНИЕМ, ' + name.toUpperCase() + '!');
+}
+
+function applyProfile() {
+  if (!currentProfile) return;
+  document.getElementById('profile-name-display').textContent = currentProfile.name.toUpperCase();
+  // Pre-fill name in game creation modals
+  var cn = document.getElementById('cn');
+  var jn = document.getElementById('jn');
+  if (cn) cn.value = currentProfile.name;
+  if (jn) jn.value = currentProfile.name;
+}
+
+function openProfileModal() {
+  if (!currentProfile) return;
+  document.getElementById('pm-name').textContent = currentProfile.name.toUpperCase();
+  document.getElementById('pm-wins').textContent = currentProfile.wins;
+  document.getElementById('pm-losses').textContent = currentProfile.losses;
+  document.getElementById('pm-draws').textContent = currentProfile.draws;
+  document.getElementById('pm-total').textContent = currentProfile.total;
+  document.getElementById('pm-name-input').value = '';
+  document.getElementById('profile-overlay').classList.add('open');
+}
+
+function closeProfileModal() {
+  document.getElementById('profile-overlay').classList.remove('open');
+}
+
+function changeNickname() {
+  var newName = (document.getElementById('pm-name-input').value || '').trim();
+  if (!newName) { toast('ВВЕДИТЕ НОВОЕ ИМЯ'); return; }
+  var existing = getProfile(newName);
+  if (existing) {
+    currentProfile = existing;
+  } else {
+    currentProfile.name = newName;
+    saveProfile(currentProfile);
+  }
+  applyProfile();
+  closeProfileModal();
+  toast('ИМЯ ИЗМЕНЕНО: ' + newName.toUpperCase());
+}
+
+// Login input: show "NEW PLAYER" badge if name not found
+document.getElementById('login-name-input').addEventListener('input', function() {
+  var name = this.value.trim();
+  var badge = document.getElementById('login-new-badge');
+  if (name.length >= 2) {
+    var exists = getProfile(name);
+    badge.style.display = exists ? 'none' : 'block';
+    document.getElementById('login-title').textContent = exists ? 'С ВОЗВРАЩЕНИЕМ' : 'ДОБРО ПОЖАЛОВАТЬ';
+    document.getElementById('login-sub').textContent = exists ? 'ВХОД В ПРОФИЛЬ' : 'НОВЫЙ ИГРОК';
+    document.getElementById('login-btn').textContent = exists ? 'ВОЙТИ' : 'СОЗДАТЬ АККАУНТ';
+  } else {
+    badge.style.display = 'none';
+    document.getElementById('login-title').textContent = 'ДОБРО ПОЖАЛОВАТЬ';
+    document.getElementById('login-sub').textContent = 'ВВЕДИТЕ ВАШ НИКНЕЙМ';
+    document.getElementById('login-btn').textContent = 'ВОЙТИ';
+  }
+});
+
+document.getElementById('login-name-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') loginSubmit();
+});
+
+// Profile overlay click outside to close
+document.getElementById('profile-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeProfileModal();
+});
+
+// Track game results
+var _origEndGame = endGame;
+endGame = function(winner, reason) {
+  _origEndGame(winner, reason);
+  if (currentProfile && myColor && reason !== 'stalemate') {
+    currentProfile.total++;
+    var myCol = myColor[0]; // 'w' or 'b'
+    if (reason === 'stalemate') {
+      currentProfile.draws++;
+    } else if (winner === myCol) {
+      currentProfile.wins++;
+    } else {
+      currentProfile.losses++;
+    }
+    saveProfile(currentProfile);
+  }
+};
+
+// Init on load
+initProfile();
+
+</script
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">INFERNUM</div>
+    <div class="login-sub">Королевская игра · 64 поля</div>
+    <div class="login-field">
+      <label>ВАШ ПСЕВДОНИМ</label>
+      <input id="login-input" placeholder="Введите имя..." maxlength="20" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="login-status" id="login-status"></div>
+    <button class="btn btn-red" style="width:100%;font-size:16px;padding:14px;" onclick="doLogin()">ВОЙТИ В ИГРУ</button>
+    <div style="margin-top:16px;text-align:center;font-size:11px;color:rgba(192,57,43,0.3);letter-spacing:2px;">НАЖМИТЕ ENTER ИЛИ КНОПКУ</div>
+  </div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div class="overlay" id="profile-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('profile-overlay')">✕</button>
+    <div class="modal-title">ПРОФИЛЬ</div>
+    <div class="field">
+      <label>ПСЕВДОНИМ</label>
+      <input id="profile-name-input" placeholder="Имя..." maxlength="20">
+    </div>
+    <div class="profile-stats">
+      <div class="stat-box"><span class="stat-val" id="stat-games">0</span><span class="stat-lbl">ПАРТИЙ</span></div>
+      <div class="stat-box"><span class="stat-val" id="stat-wins">0</span><span class="stat-lbl">ПОБЕД</span></div>
+      <div class="stat-box"><span class="stat-val" id="stat-losses">0</span><span class="stat-lbl">ПОРАЖЕНИЙ</span></div>
+    </div>
+    <button class="btn btn-red" style="width:100%" onclick="saveProfile()">СОХРАНИТЬ</button>
+  </div>
+</div>
+>
