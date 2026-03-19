@@ -301,11 +301,11 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 3
 
   <div class="tab-panel active" id="panel-play">
     <div class="cards">
-      <div class="card" onclick="openModal('c-overlay')">
+      <div class="card" id="card-create">
         <div class="card-title">СОЗДАТЬ</div>
         <div class="card-desc">Открыть новую партию и пригласить соперника по коду</div>
       </div>
-      <div class="card" onclick="openModal('j-overlay')">
+      <div class="card" id="card-join">
         <div class="card-title">ВОЙТИ</div>
         <div class="card-desc">Ввести код комнаты и принять вызов противника</div>
       </div>
@@ -343,7 +343,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 3
   <div class="glayout">
     <div class="side" style="align-items:flex-end">
       <div class="hbox"><div class="panel-t">ИСТОРИЯ</div><div id="mlist"></div></div>
-      <button class="btn btn-ghost btn-sm" onclick="resign()">СДАТЬСЯ</button>
+      <button class="btn btn-ghost btn-sm" id="btn-resign">СДАТЬСЯ</button>
     </div>
     <div>
       <div class="caprow" id="cap-b" style="margin-bottom:8px"><span class="caplbl">ВЗЯТЫ</span></div>
@@ -359,8 +359,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 3
     </div>
     <div class="side">
       <div class="panel-t">УПРАВЛЕНИЕ</div>
-      <button class="btn btn-ghost btn-sm" onclick="goLobby()">← МЕНЮ</button>
-      <button class="btn btn-ghost btn-sm" onclick="flipBoard()">ПЕРЕВЕРНУТЬ</button>
+      <button class="btn btn-ghost btn-sm" id="btn-lobby">← МЕНЮ</button>
+      <button class="btn btn-ghost btn-sm" id="btn-flip">ПЕРЕВЕРНУТЬ</button>
     </div>
   </div>
 </div>
@@ -369,13 +369,13 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 3
 <!-- CREATE MODAL -->
 <div class="overlay" id="c-overlay">
   <div class="modal">
-    <button class="modal-close" onclick="closeModal('c-overlay')">✕</button>
+    <button class="modal-close" id="close-c-modal">✕</button>
     <div class="modal-title">НОВАЯ ПАРТИЯ</div>
     <div class="field"><label>ВАШ ПСЕВДОНИМ</label><input id="cn" placeholder="Имя..." maxlength="20"></div>
     <div class="field"><label>ВЫ ИГРАЕТЕ</label>
       <select id="cc"><option value="white">♔ Белыми</option><option value="black">♟ Чёрными</option><option value="random">⚄ Случайно</option></select>
     </div>
-    <button class="btn btn-red" style="width:100%" onclick="createRoom()">СОЗДАТЬ КОМНАТУ</button>
+    <button class="btn btn-red" style="width:100%" id="btn-create-room">СОЗДАТЬ КОМНАТУ</button>
   </div>
 </div>
 
@@ -383,22 +383,22 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 3
 <div class="overlay" id="w-overlay">
   <div class="modal" style="text-align:center">
     <div class="modal-title">КОД КОМНАТЫ</div>
-    <div class="code-display" id="rcode" onclick="copyCode()">----</div>
+    <div class="code-display" id="rcode" id="rcode" style="font-family:'Bebas Neue',sans-serif;font-size:52px;letter-spacing:16px;color:var(--red-bright);text-align:center;text-shadow:0 0 30px var(--red-glow);background:rgba(192,57,43,0.05);border:1px dashed rgba(192,57,43,0.35);padding:18px;cursor:copy;transition:background 0.2s;margin:8px 0;">----</div>
     <p class="hint" style="margin-bottom:4px">Нажмите на код, чтобы скопировать</p>
     <div class="wait-dots"><div class="wait-dot"></div><div class="wait-dot"></div><div class="wait-dot"></div></div>
     <p class="hint" style="margin-bottom:18px">ОЖИДАНИЕ СОПЕРНИКА</p>
-    <button class="btn btn-ghost btn-sm" style="width:100%" onclick="startAsLocal()">НАЧАТЬ ЛОКАЛЬНО →</button>
+    <button class="btn btn-ghost btn-sm" style="width:100%" id="btn-start-local">НАЧАТЬ ЛОКАЛЬНО →</button>
   </div>
 </div>
 
 <!-- JOIN MODAL -->
 <div class="overlay" id="j-overlay">
   <div class="modal">
-    <button class="modal-close" onclick="closeModal('j-overlay')">✕</button>
+    <button class="modal-close" id="close-j-modal">✕</button>
     <div class="modal-title">ВОЙТИ В ПАРТИЮ</div>
     <div class="field"><label>ВАШ ПСЕВДОНИМ</label><input id="jn" placeholder="Имя..." maxlength="20"></div>
     <div class="field"><label>КОД КОМНАТЫ</label><input id="jc" placeholder="XXXX" maxlength="4" style="text-transform:uppercase;letter-spacing:8px;text-align:center;font-size:22px"></div>
-    <button class="btn btn-red" style="width:100%" onclick="joinRoom()">ПРИНЯТЬ ВЫЗОВ</button>
+    <button class="btn btn-red" style="width:100%" id="btn-join-room">ПРИНЯТЬ ВЫЗОВ</button>
   </div>
 </div>
 
@@ -415,8 +415,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 3
   <div class="go-title" id="go-t">ШАХ И МАТ</div>
   <div class="go-sub" id="go-s"></div>
   <div class="go-btns">
-    <button class="btn btn-red" onclick="restartGame()">НОВАЯ ПАРТИЯ</button>
-    <button class="btn btn-ghost" onclick="goLobby()">В МЕНЮ</button>
+    <button class="btn btn-red" id="btn-restart">НОВАЯ ПАРТИЯ</button>
+    <button class="btn btn-ghost" id="btn-lobby2">В МЕНЮ</button>
   </div>
 </div>
 
@@ -548,11 +548,11 @@ function renderOpeningDetail(){
         </div>
         ${hasVariants?'<div class="var-tabs-wrap"><div id="var-tabs"></div></div>':''}
         <div class="op-controls">
-          <button class="op-btn" id="ob-first" onclick="opGo(0)">⏮</button>
-          <button class="op-btn" id="ob-prev" onclick="opGo(opStep-1)">◀</button>
+          <button class="op-btn" id="ob-first" id="ob-first">⏮</button>
+          <button class="op-btn" id="ob-prev" id="ob-prev">◀</button>
           <span class="step-counter" id="step-ctr">0 / ${op.moves.length}</span>
-          <button class="op-btn" id="ob-next" onclick="opGo(opStep+1)">▶</button>
-          <button class="op-btn" id="ob-last" onclick="opGo(currentMoves().length)">⏭</button>
+          <button class="op-btn" id="ob-next" id="ob-next">▶</button>
+          <button class="op-btn" id="ob-last" id="ob-last">⏭</button>
         </div>
         <div id="op-explain-box" class="op-explain" style="max-width:${8*52+16}px">
           <div class="op-explain-title">НАЧАЛЬНАЯ ПОЗИЦИЯ</div>
@@ -1331,4 +1331,38 @@ if (document.readyState === 'loading') {
   initProfile();
 }
 
->
+
+// ── Bind all onclick handlers safely ──
+document.addEventListener('DOMContentLoaded', function() {
+  function bind(id, fn) { var el = document.getElementById(id); if(el) el.addEventListener('click', fn); }
+
+  bind('profile-btn-click', function() { openProfileModal(); });
+  bind('tab-play-btn',      function() { switchTab('play'); });
+  bind('tab-openings-btn',  function() { switchTab('openings'); });
+  bind('card-create',       function() { openModal('c-overlay'); });
+  bind('card-join',         function() { openModal('j-overlay'); });
+  bind('close-c-modal',     function() { closeModal('c-overlay'); });
+  bind('close-j-modal',     function() { closeModal('j-overlay'); });
+  bind('btn-resign',        function() { resign(); });
+  bind('btn-lobby',         function() { goLobby(); });
+  bind('btn-lobby2',        function() { goLobby(); });
+  bind('btn-flip',          function() { flipBoard(); });
+  bind('btn-restart',       function() { restartGame(); });
+  bind('btn-create-room',   function() { createRoom(); });
+  bind('btn-join-room',     function() { joinRoom(); });
+  bind('btn-start-local',   function() { startAsLocal(); });
+  bind('rcode',             function() { copyCode(); });
+  bind('login-btn',         function() { loginSubmit(); });
+  bind('btn-close-profile', function() { closeProfileModal(); });
+  bind('btn-change-nick',   function() { changeNickname(); });
+
+  // op buttons need dynamic rebind (rendered via innerHTML)
+  document.addEventListener('click', function(e) {
+    if(e.target.id==='ob-first')  opGo(0);
+    if(e.target.id==='ob-prev')   opGo(opStep-1);
+    if(e.target.id==='ob-next')   opGo(opStep+1);
+    if(e.target.id==='ob-last')   opGo(currentMoves().length);
+  });
+});
+
+</script>
