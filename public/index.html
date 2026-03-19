@@ -279,7 +279,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 3
   <div class="pill">CHESS ROYAL</div>
   <div style="display:flex;align-items:center;gap:12px">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:3px;color:rgba(192,57,43,0.3);">MMXXVI</div>
-    <div id="profile-btn" onclick="openProfileModal()" style="display:flex;align-items:center;gap:8px;cursor:pointer;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.3);padding:6px 14px;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);transition:all 0.2s;" onmouseover="this.style.borderColor='#c0392b'" onmouseout="this.style.borderColor='rgba(192,57,43,0.3)'">
+    <div id="profile-btn-click" style="display:flex;align-items:center;gap:8px;cursor:pointer;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.3);padding:6px 14px;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);transition:all 0.2s;" onmouseover="this.style.borderColor='#c0392b'" onmouseout="this.style.borderColor='rgba(192,57,43,0.3)'">
       <span style="font-size:16px">♟</span>
       <span id="profile-name-display" style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:2px;color:#e74c3c;">ИГРОК</span>
     </div>
@@ -295,8 +295,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 3
   </div>
 
   <div class="lobby-tabs">
-    <div class="ltab active" id="tab-play" onclick="switchTab('play')">ИГРА</div>
-    <div class="ltab" id="tab-openings" onclick="switchTab('openings')">ДЕБЮТЫ</div>
+    <div class="ltab active" id="tab-play-btn">ИГРА</div>
+    <div class="ltab" id="tab-openings-btn">ДЕБЮТЫ</div>
   </div>
 
   <div class="tab-panel active" id="panel-play">
@@ -1245,7 +1245,7 @@ function renderFriendsList() {
       + '<span style="font-family:Bebas Neue,sans-serif;font-size:14px;letter-spacing:2px;color:#e74c3c">' + name.toUpperCase() + '</span>'
       + '<span style="font-size:11px;color:rgba(232,224,216,0.3);letter-spacing:1px">' + stats + '</span>'
       + '</div>'
-      + '<button onclick="removeFriend('' + name + '')" style="background:none;border:1px solid rgba(192,57,43,0.25);color:rgba(192,57,43,0.5);font-family:Bebas Neue,sans-serif;font-size:11px;letter-spacing:2px;padding:4px 10px;cursor:pointer;">УДАЛИТЬ</button>';
+      + '<button onclick="removeFriend(\'' + name + '\')" style="background:none;border:1px solid rgba(192,57,43,0.25);color:rgba(192,57,43,0.5);font-family:Bebas Neue,sans-serif;font-size:11px;letter-spacing:2px;padding:4px 10px;cursor:pointer;">УДАЛИТЬ</button>';
     list.appendChild(row);
   });
 }
