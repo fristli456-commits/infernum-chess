@@ -1365,3 +1365,41 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
+
+<!-- LOGIN OVERLAY -->
+<div class="profile-modal-overlay" id="login-overlay">
+  <div class="profile-modal">
+    <div class="profile-modal-title" id="login-title">ДОБРО ПОЖАЛОВАТЬ</div>
+    <div class="profile-modal-sub" id="login-sub">ВВЕДИТЕ ВАШ НИКНЕЙМ</div>
+    <div class="field" style="margin-top:20px;">
+      <label>НИКНЕЙМ</label>
+      <input id="login-name-input" placeholder="Введите имя..." maxlength="20" style="font-size:20px;letter-spacing:4px;text-align:center;" autocomplete="off">
+    </div>
+    <div id="login-new-badge" class="profile-new-badge" style="display:none;">✦ НОВЫЙ ИГРОК</div>
+    <button class="btn btn-red" style="width:100%;margin-top:12px" id="login-btn" onclick="loginSubmit()">ВОЙТИ</button>
+  </div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div class="profile-modal-overlay" id="profile-overlay">
+  <div class="profile-modal">
+    <button style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(192,57,43,0.5);font-size:18px;cursor:pointer;" onclick="closeProfileModal()">✕</button>
+    <div class="profile-modal-title" id="pm-name">ИГРОК</div>
+    <div class="profile-modal-sub">ПРОФИЛЬ</div>
+    <div class="profile-stat"><span class="profile-stat-label">ПОБЕДЫ</span><span class="profile-stat-value" id="pm-wins">0</span></div>
+    <div class="profile-stat"><span class="profile-stat-label">ПОРАЖЕНИЯ</span><span class="profile-stat-value" id="pm-losses">0</span></div>
+    <div class="profile-stat"><span class="profile-stat-label">НИЧЬИ</span><span class="profile-stat-value" id="pm-draws">0</span></div>
+    <div class="profile-stat" style="border:none;margin-bottom:20px"><span class="profile-stat-label">ПАРТИЙ СЫГРАНО</span><span class="profile-stat-value" id="pm-total">0</span></div>
+    <div style="padding-top:20px;border-top:1px solid rgba(192,57,43,0.15);">
+      <div style="font-size:11px;letter-spacing:3px;color:rgba(192,57,43,0.5);margin-bottom:10px;">СМЕНИТЬ НИКНЕЙМ</div>
+      <div style="display:flex;gap:8px;">
+        <input id="pm-name-input" placeholder="Новое имя..." maxlength="20" style="background:rgba(255,255,255,0.03);border:1px solid rgba(192,57,43,0.25);padding:10px 14px;color:#e8e0d8;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;outline:none;flex:1;">
+        <button class="btn btn-ghost btn-sm" onclick="changeNickname()">OK</button>
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:16px" onclick="closeProfileModal();document.getElementById('login-overlay').classList.add('open');">СМЕНИТЬ АККАУНТ</button>
+  </div>
+</div>
+</div>
+</body>
+</html>
