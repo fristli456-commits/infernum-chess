@@ -1,1561 +1,787 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<title>INFERNUM — Friends System Module</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
-<style>
-/* ═══════════════════════════════════════════
-   FRIENDS SYSTEM — INFERNUM CHESS
-   Вставить в существующий index.html:
-   1. CSS → в тег <style>
-   2. HTML → перед закрывающим </div> .app
-   3. JS → перед закрывающим </script>
-   ═══════════════════════════════════════════ */
-
-/* ── FRIENDS PANEL (боковая панель) ── */
-.friends-btn {
-  position: fixed;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 150;
-  background: rgba(192,57,43,0.12);
-  border: 1px solid rgba(192,57,43,0.35);
-  border-right: none;
-  padding: 14px 10px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  clip-path: polygon(0 8px, 8px 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
-  transition: all 0.25s;
-  backdrop-filter: blur(10px);
-}
-.friends-btn:hover {
-  background: rgba(192,57,43,0.22);
-  border-color: var(--red);
-  padding-right: 14px;
-}
-.friends-btn-label {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 10px;
-  letter-spacing: 3px;
-  color: var(--red);
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-}
-.friends-notif {
-  width: 8px;
-  height: 8px;
-  background: var(--red-bright);
-  border-radius: 50%;
-  box-shadow: 0 0 8px var(--red-glow);
-  display: none;
-  animation: pulse-dot 1.5s infinite;
-}
-.friends-notif.has-notif { display: block; }
-@keyframes pulse-dot {
-  0%,100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.4); opacity: 0.7; }
-}
-
-/* ── FRIENDS DRAWER ── */
-.friends-drawer {
-  position: fixed;
-  right: -400px;
-  top: 62px;
-  width: 360px;
-  height: calc(100vh - 62px);
-  background: rgba(10,10,10,0.98);
-  border-left: 1px solid rgba(192,57,43,0.3);
-  z-index: 140;
-  display: flex;
-  flex-direction: column;
-  transition: right 0.35s cubic-bezier(0.4,0,0.2,1);
-  backdrop-filter: blur(20px);
-}
-.friends-drawer.open { right: 0; }
-.friends-drawer::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--red), transparent);
-}
-
-.fd-header {
-  padding: 20px 20px 14px;
-  border-bottom: 1px solid rgba(192,57,43,0.15);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-}
-.fd-title {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 20px;
-  letter-spacing: 5px;
-  color: var(--red-bright);
-}
-.fd-close {
-  background: none;
-  border: none;
-  color: rgba(192,57,43,0.5);
-  font-size: 16px;
-  cursor: pointer;
-  transition: color 0.2s;
-  padding: 4px 8px;
-}
-.fd-close:hover { color: var(--red); }
-
-/* ── TABS внутри drawer ── */
-.fd-tabs {
-  display: flex;
-  border-bottom: 1px solid rgba(192,57,43,0.12);
-  flex-shrink: 0;
-}
-.fd-tab {
-  flex: 1;
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 12px;
-  letter-spacing: 3px;
-  padding: 10px 6px;
-  text-align: center;
-  color: var(--text-dim);
-  cursor: pointer;
-  transition: all 0.2s;
-  border-bottom: 2px solid transparent;
-  position: relative;
-}
-.fd-tab:hover { color: var(--red); }
-.fd-tab.active {
-  color: var(--red-bright);
-  border-bottom-color: var(--red);
-  background: rgba(192,57,43,0.05);
-}
-.fd-tab-badge {
-  position: absolute;
-  top: 6px;
-  right: 10px;
-  width: 16px;
-  height: 16px;
-  background: var(--red);
-  border-radius: 50%;
-  font-size: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-family: 'Rajdhani', sans-serif;
-  font-weight: 700;
-}
-
-.fd-body {
-  flex: 1;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--red-dark) transparent;
-}
-.fd-panel { display: none; padding: 16px; }
-.fd-panel.active { display: block; }
-
-/* ── ПОИСК ДРУГА ── */
-.fd-search-wrap {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-.fd-search-input {
-  flex: 1;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(192,57,43,0.2);
-  padding: 10px 14px;
-  color: var(--text);
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  outline: none;
-  letter-spacing: 1px;
-  transition: border-color 0.2s;
-}
-.fd-search-input:focus { border-color: var(--red); }
-.fd-search-input::placeholder { color: var(--text-dim); }
-.fd-add-btn {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 12px;
-  letter-spacing: 2px;
-  padding: 10px 16px;
-  background: linear-gradient(135deg, var(--red-dark), var(--red));
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
-  transition: all 0.2s;
-}
-.fd-add-btn:hover { box-shadow: 0 4px 20px rgba(192,57,43,0.5); }
-
-/* ── FRIEND CARD ── */
-.friend-card {
-  background: rgba(22,22,22,0.9);
-  border: 1px solid rgba(192,57,43,0.12);
-  padding: 12px 14px;
-  margin-bottom: 8px;
-  transition: all 0.2s;
-  position: relative;
-  overflow: hidden;
-}
-.friend-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 8px;
-  height: 8px;
-  background: var(--red);
-  clip-path: polygon(100% 0, 0 0, 100% 100%);
-  opacity: 0.2;
-}
-.friend-card:hover {
-  border-color: rgba(192,57,43,0.35);
-  background: rgba(192,57,43,0.05);
-}
-.friend-card:hover::after { opacity: 0.6; }
-
-.fc-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.fc-avatar {
-  width: 36px;
-  height: 36px;
-  background: rgba(192,57,43,0.1);
-  border: 1px solid rgba(192,57,43,0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  flex-shrink: 0;
-  font-size: 16px;
-}
-.fc-info { flex: 1; min-width: 0; }
-.fc-name {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 15px;
-  letter-spacing: 2px;
-  color: var(--red-bright);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.fc-stats {
-  font-size: 11px;
-  color: var(--text-dim);
-  letter-spacing: 1px;
-  margin-top: 2px;
-}
-.fc-online {
-  width: 8px;
-  height: 8px;
-  background: #4caf50;
-  border-radius: 50%;
-  flex-shrink: 0;
-  box-shadow: 0 0 6px rgba(76,175,80,0.5);
-}
-.fc-online.offline { background: rgba(232,224,216,0.15); box-shadow: none; }
-
-.fc-actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 10px;
-}
-.fc-btn {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 11px;
-  letter-spacing: 2px;
-  padding: 6px 12px;
-  border: 1px solid rgba(192,57,43,0.3);
-  background: transparent;
-  color: var(--red);
-  cursor: pointer;
-  transition: all 0.2s;
-  flex: 1;
-  text-align: center;
-}
-.fc-btn:hover {
-  border-color: var(--red);
-  background: rgba(192,57,43,0.08);
-}
-.fc-btn.primary {
-  background: linear-gradient(135deg, var(--red-dark), var(--red));
-  color: #fff;
-  border: none;
-  clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
-}
-.fc-btn.primary:hover { box-shadow: 0 3px 14px rgba(192,57,43,0.45); }
-.fc-btn.danger {
-  color: rgba(192,57,43,0.4);
-  border-color: rgba(192,57,43,0.15);
-  font-size: 10px;
-}
-.fc-btn.danger:hover {
-  color: var(--red);
-  border-color: rgba(192,57,43,0.4);
-  background: rgba(192,57,43,0.04);
-}
-
-/* ── INVITE REQUEST CARDS ── */
-.invite-card {
-  background: rgba(192,57,43,0.07);
-  border: 1px solid rgba(192,57,43,0.3);
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  position: relative;
-  animation: slideIn 0.3s ease;
-}
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(20px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-.invite-card::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--red);
-}
-.invite-from {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 14px;
-  letter-spacing: 3px;
-  color: var(--red-bright);
-  margin-bottom: 4px;
-}
-.invite-details {
-  font-size: 12px;
-  color: var(--text-dim);
-  letter-spacing: 1px;
-  margin-bottom: 12px;
-  line-height: 1.6;
-}
-.invite-detail-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 6px;
-}
-.invite-badge {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 10px;
-  letter-spacing: 2px;
-  padding: 3px 10px;
-  border: 1px solid rgba(192,57,43,0.3);
-  color: var(--red);
-  background: rgba(192,57,43,0.05);
-}
-.invite-actions { display: flex; gap: 8px; }
-.invite-accept {
-  flex: 1;
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 12px;
-  letter-spacing: 3px;
-  padding: 9px;
-  background: linear-gradient(135deg, var(--red-dark), var(--red));
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
-  transition: all 0.2s;
-}
-.invite-accept:hover { box-shadow: 0 4px 20px rgba(192,57,43,0.5); }
-.invite-decline {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 11px;
-  letter-spacing: 2px;
-  padding: 9px 16px;
-  background: transparent;
-  border: 1px solid rgba(192,57,43,0.25);
-  color: rgba(192,57,43,0.5);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.invite-decline:hover {
-  border-color: var(--red);
-  color: var(--red);
-}
-
-/* ── INVITE SEND MODAL ── */
-.invite-modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 500;
-  background: rgba(0,0,0,0.88);
-  backdrop-filter: blur(12px);
-  align-items: center;
-  justify-content: center;
-}
-.invite-modal-overlay.open { display: flex; animation: fadeUp 0.3s ease; }
-
-.invite-modal {
-  background: #161616;
-  border: 1px solid rgba(192,57,43,0.45);
-  padding: 44px 40px;
-  max-width: 460px;
-  width: 90%;
-  position: relative;
-  clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 28px 100%, 0 calc(100% - 28px));
-}
-.invite-modal::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 28px;
-  height: 28px;
-  background: var(--red);
-  clip-path: polygon(100% 0, 0 0, 100% 100%);
-  opacity: 0.75;
-}
-.invite-modal-title {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 26px;
-  letter-spacing: 5px;
-  color: var(--red-bright);
-  margin-bottom: 6px;
-}
-.invite-modal-sub {
-  font-size: 12px;
-  letter-spacing: 3px;
-  color: var(--text-dim);
-  margin-bottom: 30px;
-}
-.invite-to-name {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 18px;
-  letter-spacing: 4px;
-  color: #e8e0d8;
-  border: 1px solid rgba(192,57,43,0.2);
-  background: rgba(192,57,43,0.05);
-  padding: 10px 16px;
-  margin-bottom: 24px;
-  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* ── SIDE SELECTOR ── */
-.side-selector {
-  margin-bottom: 24px;
-}
-.side-selector-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  color: rgba(192,57,43,0.6);
-  margin-bottom: 12px;
-}
-.side-options {
-  display: flex;
-  gap: 10px;
-}
-.side-opt {
-  flex: 1;
-  padding: 16px 10px;
-  border: 1px solid rgba(192,57,43,0.2);
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: center;
-  position: relative;
-}
-.side-opt::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 10px;
-  height: 10px;
-  background: var(--red);
-  clip-path: polygon(100% 0, 0 0, 100% 100%);
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.side-opt:hover {
-  border-color: rgba(192,57,43,0.5);
-  background: rgba(192,57,43,0.05);
-}
-.side-opt.selected {
-  border-color: var(--red);
-  background: rgba(192,57,43,0.1);
-}
-.side-opt.selected::after { opacity: 0.7; }
-.side-opt-piece { font-size: 28px; display: block; margin-bottom: 6px; }
-.side-opt-name {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 13px;
-  letter-spacing: 3px;
-  color: var(--text-dim);
-  display: block;
-}
-.side-opt.selected .side-opt-name { color: var(--red-bright); }
-
-/* ── TIME SELECTOR ── */
-.time-selector { margin-bottom: 28px; }
-.time-selector-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  color: rgba(192,57,43,0.6);
-  margin-bottom: 12px;
-}
-.time-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-.time-opt {
-  padding: 12px 6px;
-  border: 1px solid rgba(192,57,43,0.2);
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: center;
-}
-.time-opt:hover {
-  border-color: rgba(192,57,43,0.5);
-  background: rgba(192,57,43,0.05);
-}
-.time-opt.selected {
-  border-color: var(--red);
-  background: rgba(192,57,43,0.1);
-}
-.time-opt-val {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 18px;
-  letter-spacing: 2px;
-  color: var(--red-bright);
-  display: block;
-}
-.time-opt-label {
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: var(--text-dim);
-  display: block;
-  margin-top: 2px;
-}
-.time-opt.selected .time-opt-label { color: var(--red); }
-
-/* ── CUSTOM TIME ── */
-.custom-time-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-}
-.custom-time-input {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(192,57,43,0.2);
-  padding: 10px 14px;
-  color: var(--text);
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 18px;
-  letter-spacing: 3px;
-  outline: none;
-  width: 80px;
-  text-align: center;
-  transition: border-color 0.2s;
-}
-.custom-time-input:focus { border-color: var(--red); }
-.custom-time-unit {
-  font-size: 12px;
-  letter-spacing: 2px;
-  color: var(--text-dim);
-}
-
-.invite-send-btn {
-  width: 100%;
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 16px;
-  letter-spacing: 5px;
-  padding: 16px;
-  background: linear-gradient(135deg, var(--red-dark), var(--red), var(--red-bright));
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
-  box-shadow: 0 4px 24px rgba(192,57,43,0.4);
-  transition: all 0.25s;
-}
-.invite-send-btn:hover {
-  box-shadow: 0 8px 40px rgba(192,57,43,0.65);
-  transform: translateY(-2px);
-}
-.invite-cancel-btn {
-  width: 100%;
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 13px;
-  letter-spacing: 4px;
-  padding: 12px;
-  background: transparent;
-  border: 1px solid rgba(192,57,43,0.25);
-  color: rgba(192,57,43,0.5);
-  cursor: pointer;
-  margin-top: 10px;
-  transition: all 0.2s;
-}
-.invite-cancel-btn:hover {
-  border-color: var(--red);
-  color: var(--red);
-}
-
-/* ── WAITING FOR RESPONSE ── */
-.invite-waiting {
-  text-align: center;
-  padding: 20px 0 10px;
-}
-.invite-waiting-anim {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin: 20px 0 16px;
-}
-.iw-dot {
-  width: 10px;
-  height: 10px;
-  background: var(--red);
-  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  animation: puls 1.4s infinite;
-}
-.iw-dot:nth-child(2) { animation-delay: .2s; }
-.iw-dot:nth-child(3) { animation-delay: .4s; }
-.invite-waiting-text {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 13px;
-  letter-spacing: 4px;
-  color: var(--text-dim);
-}
-.invite-waiting-to {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 20px;
-  letter-spacing: 4px;
-  color: var(--red-bright);
-  margin-bottom: 4px;
-}
-
-/* ── EMPTY STATE ── */
-.fd-empty {
-  text-align: center;
-  padding: 40px 20px;
-  color: rgba(192,57,43,0.25);
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 14px;
-  letter-spacing: 4px;
-  line-height: 2;
-}
-
-/* ── SECTION HEADERS ── */
-.fd-section-title {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 10px;
-  letter-spacing: 4px;
-  color: rgba(192,57,43,0.35);
-  padding: 6px 0 10px;
-  border-bottom: 1px solid rgba(192,57,43,0.08);
-  margin-bottom: 12px;
-}
-
-/* ── PENDING FRIEND REQUEST ── */
-.pending-card {
-  background: rgba(192,57,43,0.04);
-  border: 1px dashed rgba(192,57,43,0.25);
-  padding: 12px 14px;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.pending-name {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 14px;
-  letter-spacing: 2px;
-  color: rgba(232,224,216,0.6);
-}
-.pending-label {
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: rgba(192,57,43,0.4);
-  margin-top: 2px;
-}
-.pending-btns { display: flex; gap: 6px; }
-.pend-accept {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 11px;
-  letter-spacing: 2px;
-  padding: 6px 12px;
-  background: rgba(76,175,80,0.15);
-  border: 1px solid rgba(76,175,80,0.35);
-  color: #4caf50;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.pend-accept:hover { background: rgba(76,175,80,0.25); }
-.pend-decline {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 11px;
-  letter-spacing: 2px;
-  padding: 6px 12px;
-  background: transparent;
-  border: 1px solid rgba(192,57,43,0.2);
-  color: rgba(192,57,43,0.5);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.pend-decline:hover { border-color: var(--red); color: var(--red); }
-</style>
-
-<!-- ═══════════════════════════════════════════════════════
-     HTML — вставить в .app перед закрывающим тега </div>
-     ═══════════════════════════════════════════════════════ -->
-
-<!-- FRIENDS TOGGLE BUTTON -->
-<div class="friends-btn" id="friends-toggle-btn" onclick="toggleFriendsDrawer()">
-  <div class="friends-notif" id="friends-notif-dot"></div>
-  <span style="font-size:18px">⚔</span>
-  <div class="friends-btn-label">ДРУЗЬЯ</div>
-</div>
-
-<!-- FRIENDS DRAWER -->
-<div class="friends-drawer" id="friends-drawer">
-  <div class="fd-header">
-    <div class="fd-title">ДРУЗЬЯ</div>
-    <button class="fd-close" onclick="toggleFriendsDrawer()">✕</button>
-  </div>
-  <div class="fd-tabs">
-    <div class="fd-tab active" id="fdt-friends" onclick="switchFdTab('friends')">
-      СПИСОК
-    </div>
-    <div class="fd-tab" id="fdt-requests" onclick="switchFdTab('requests')">
-      ЗАПРОСЫ
-      <span class="fd-tab-badge" id="req-badge" style="display:none">0</span>
-    </div>
-    <div class="fd-tab" id="fdt-invites" onclick="switchFdTab('invites')">
-      ВЫЗОВЫ
-      <span class="fd-tab-badge" id="inv-badge" style="display:none">0</span>
-    </div>
-  </div>
-  <div class="fd-body">
-    <!-- СПИСОК ДРУЗЕЙ -->
-    <div class="fd-panel active" id="fdp-friends">
-      <div style="margin-bottom:14px;">
-        <div class="fd-section-title">ДОБАВИТЬ ДРУГА</div>
-        <div class="fd-search-wrap">
-          <input class="fd-search-input" id="fd-add-input" placeholder="Никнейм игрока..." maxlength="20" autocomplete="off">
-          <button class="fd-add-btn" onclick="sendFriendRequest()">ДОБАВИТЬ</button>
-        </div>
-      </div>
-      <div class="fd-section-title">МОИ ДРУЗЬЯ</div>
-      <div id="friends-list-container"></div>
-    </div>
-
-    <!-- ЗАПРОСЫ В ДРУЗЬЯ -->
-    <div class="fd-panel" id="fdp-requests">
-      <div class="fd-section-title">ВХОДЯЩИЕ ЗАПРОСЫ</div>
-      <div id="friend-requests-container"></div>
-      <div class="fd-section-title" style="margin-top:18px;">ИСХОДЯЩИЕ</div>
-      <div id="friend-sent-container"></div>
-    </div>
-
-    <!-- ИГРОВЫЕ ВЫЗОВЫ -->
-    <div class="fd-panel" id="fdp-invites">
-      <div class="fd-section-title">ВХОДЯЩИЕ ВЫЗОВЫ</div>
-      <div id="game-invites-container"></div>
-    </div>
-  </div>
-</div>
-
-<!-- INVITE SEND MODAL -->
-<div class="invite-modal-overlay" id="invite-modal-overlay">
-  <div class="invite-modal" id="invite-modal">
-
-    <!-- Форма приглашения -->
-    <div id="invite-form-view">
-      <div class="invite-modal-title">ВЫЗОВ НА ПАРТИЮ</div>
-      <div class="invite-modal-sub">НАСТРОЙТЕ УСЛОВИЯ ИГРЫ</div>
-
-      <div class="invite-to-name" id="invite-to-display">
-        <span>⚔</span>
-        <span id="invite-to-name-text">ИГРОК</span>
-      </div>
-
-      <!-- ВЫБОР СТОРОНЫ -->
-      <div class="side-selector">
-        <div class="side-selector-label">ВЫ ИГРАЕТЕ</div>
-        <div class="side-options">
-          <div class="side-opt selected" id="side-white" onclick="selectSide('white')">
-            <span class="side-opt-piece">♔</span>
-            <span class="side-opt-name">БЕЛЫЕ</span>
-          </div>
-          <div class="side-opt" id="side-black" onclick="selectSide('black')">
-            <span class="side-opt-piece">♟</span>
-            <span class="side-opt-name">ЧЁРНЫЕ</span>
-          </div>
-          <div class="side-opt" id="side-random" onclick="selectSide('random')">
-            <span class="side-opt-piece">⚄</span>
-            <span class="side-opt-name">СЛУЧАЙНО</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ВЫБОР ВРЕМЕНИ -->
-      <div class="time-selector">
-        <div class="time-selector-label">КОНТРОЛЬ ВРЕМЕНИ</div>
-        <div class="time-grid">
-          <div class="time-opt selected" id="time-1" onclick="selectTime(1)">
-            <span class="time-opt-val">1</span>
-            <span class="time-opt-label">ПУЛЯ</span>
-          </div>
-          <div class="time-opt" id="time-3" onclick="selectTime(3)">
-            <span class="time-opt-val">3</span>
-            <span class="time-opt-label">БЛИЦ</span>
-          </div>
-          <div class="time-opt" id="time-5" onclick="selectTime(5)">
-            <span class="time-opt-val">5</span>
-            <span class="time-opt-label">БЫСТРАЯ</span>
-          </div>
-          <div class="time-opt" id="time-10" onclick="selectTime(10)">
-            <span class="time-opt-val">10</span>
-            <span class="time-opt-label">РАПИД</span>
-          </div>
-          <div class="time-opt" id="time-15" onclick="selectTime(15)">
-            <span class="time-opt-val">15</span>
-            <span class="time-opt-label">РАПИД</span>
-          </div>
-          <div class="time-opt" id="time-30" onclick="selectTime(30)">
-            <span class="time-opt-val">30</span>
-            <span class="time-opt-label">КЛАССИКА</span>
-          </div>
-          <div class="time-opt" id="time-60" onclick="selectTime(60)">
-            <span class="time-opt-val">60</span>
-            <span class="time-opt-label">ДЛИННАЯ</span>
-          </div>
-          <div class="time-opt" id="time-custom" onclick="selectTime('custom')">
-            <span class="time-opt-val">∞</span>
-            <span class="time-opt-label">СВОЁ</span>
-          </div>
-        </div>
-        <div class="custom-time-row" id="custom-time-row" style="display:none;">
-          <input class="custom-time-input" id="custom-time-val" type="number" min="1" max="180" value="20" placeholder="20">
-          <span class="custom-time-unit">МИНУТ НА ИГРУ</span>
-        </div>
-      </div>
-
-      <button class="invite-send-btn" onclick="sendGameInvite()">⚔ ПОСЛАТЬ ВЫЗОВ</button>
-      <button class="invite-cancel-btn" onclick="closeInviteModal()">ОТМЕНА</button>
-    </div>
-
-    <!-- Ожидание ответа -->
-    <div id="invite-waiting-view" style="display:none;">
-      <div class="invite-waiting">
-        <div class="invite-modal-title">ВЫЗОВ ОТПРАВЛЕН</div>
-        <div class="invite-waiting-anim">
-          <div class="iw-dot"></div>
-          <div class="iw-dot"></div>
-          <div class="iw-dot"></div>
-        </div>
-        <div class="invite-waiting-to" id="iw-to-name">ИГРОК</div>
-        <div class="invite-waiting-text">ОЖИДАНИЕ ОТВЕТА...</div>
-        <button class="invite-cancel-btn" style="margin-top:24px;" onclick="cancelGameInvite()">ОТОЗВАТЬ ВЫЗОВ</button>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<script>
 // ═══════════════════════════════════════════════════════════════
-//  FRIENDS SYSTEM — INFERNUM CHESS
-//  Вставить в существующий <script> блок
+//  FRIENDS SYSTEM — INFERNUM CHESS — SAFE PATCH
+//  Вставить В САМЫЙ КОНЕЦ существующего <script> блока,
+//  ПОСЛЕ всего остального кода
 // ═══════════════════════════════════════════════════════════════
 
-// ── STATE ──
+(function() {
+'use strict';
+
+// ── NAMESPACE: всё внутри одной переменной, ноль конфликтов ──
 var FS = {
   drawerOpen: false,
   activeTab: 'friends',
   inviteTarget: null,
   inviteSide: 'white',
-  inviteTime: 1,
+  inviteTime: 10,
   pendingInviteId: null,
+  pollTimer: null,
+  invitePollTimer: null,
 };
 
-// ── localStorage helpers ──
+// ── helpers ──
 function fsKey(name) {
-  return 'infernum_profile_' + (name || '').toLowerCase().trim();
+  return 'infernum_profile_' + (name||'').toLowerCase().trim();
 }
-function getFS(name) {
-  var d = localStorage.getItem(fsKey(name));
-  return d ? JSON.parse(d) : null;
+function fsGet(name) {
+  try { var d = localStorage.getItem(fsKey(name)); return d ? JSON.parse(d) : null; } catch(e) { return null; }
 }
-function saveFS(p) {
+function fsSave(p) {
   if (!p || !p.name) return;
-  localStorage.setItem(fsKey(p.name), JSON.stringify(p));
+  try { localStorage.setItem(fsKey(p.name), JSON.stringify(p)); } catch(e) {}
 }
-
-// Returns current profile (use existing currentProfile var)
-function myProfile() {
-  return typeof currentProfile !== 'undefined' ? currentProfile : null;
-}
-
-// ── DRAWER ──
-function toggleFriendsDrawer() {
-  FS.drawerOpen = !FS.drawerOpen;
-  var drawer = document.getElementById('friends-drawer');
-  if (drawer) drawer.classList.toggle('open', FS.drawerOpen);
-  if (FS.drawerOpen) renderFriendsDrawer();
-}
-
-function switchFdTab(tab) {
-  FS.activeTab = tab;
-  document.querySelectorAll('.fd-tab').forEach(function(t) { t.classList.remove('active'); });
-  document.querySelectorAll('.fd-panel').forEach(function(p) { p.classList.remove('active'); });
-  var tabEl = document.getElementById('fdt-' + tab);
-  var panEl = document.getElementById('fdp-' + tab);
-  if (tabEl) tabEl.classList.add('active');
-  if (panEl) panEl.classList.add('active');
-  renderFriendsDrawer();
-}
-
-function renderFriendsDrawer() {
-  switch (FS.activeTab) {
-    case 'friends':  renderFriendsList2(); break;
-    case 'requests': renderRequestsList(); break;
-    case 'invites':  renderGameInvites(); break;
+function fsMe() {
+  // Читаем свежую копию из localStorage каждый раз
+  if (typeof currentProfile === 'undefined' || !currentProfile) return null;
+  var fresh = fsGet(currentProfile.name);
+  if (fresh) {
+    // синхронизируем memory-объект
+    currentProfile.friends       = fresh.friends || [];
+    currentProfile.friendRequests= fresh.friendRequests || [];
+    currentProfile.sentRequests  = fresh.sentRequests || [];
+    currentProfile.gameInvites   = fresh.gameInvites || [];
+    currentProfile.sentInvites   = fresh.sentInvites || [];
   }
-  updateNotifBadges();
+  return currentProfile;
+}
+function fsToast(msg) {
+  if (typeof toast === 'function') toast(msg);
+}
+function fsEl(id) { return document.getElementById(id); }
+
+// ══════════════════════════════════════════════
+//  INJECT CSS
+// ══════════════════════════════════════════════
+(function injectCSS() {
+  var style = document.createElement('style');
+  style.textContent = `
+.fs-btn{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:150;background:rgba(192,57,43,.12);border:1px solid rgba(192,57,43,.35);border-right:none;padding:14px 10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;clip-path:polygon(0 8px,8px 0,100% 0,100% 100%,8px 100%,0 calc(100% - 8px));transition:all .25s;backdrop-filter:blur(10px);}
+.fs-btn:hover{background:rgba(192,57,43,.22);border-color:#c0392b;}
+.fs-btn-lbl{font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:3px;color:#c0392b;writing-mode:vertical-rl;}
+.fs-notif{width:8px;height:8px;background:#e74c3c;border-radius:50%;box-shadow:0 0 8px rgba(192,57,43,.6);display:none;}
+.fs-notif.on{display:block;animation:fsPulse 1.5s infinite;}
+@keyframes fsPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}}
+.fs-drawer{position:fixed;right:-380px;top:62px;width:360px;height:calc(100vh - 62px);background:rgba(10,10,10,.98);border-left:1px solid rgba(192,57,43,.3);z-index:140;display:flex;flex-direction:column;transition:right .35s cubic-bezier(.4,0,.2,1);backdrop-filter:blur(20px);}
+.fs-drawer.open{right:0;}
+.fs-dh{padding:18px 20px 14px;border-bottom:1px solid rgba(192,57,43,.15);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.fs-dh-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:5px;color:#e74c3c;}
+.fs-dh-close{background:none;border:none;color:rgba(192,57,43,.5);font-size:16px;cursor:pointer;padding:4px 8px;transition:color .2s;}
+.fs-dh-close:hover{color:#c0392b;}
+.fs-tabs{display:flex;border-bottom:1px solid rgba(192,57,43,.12);flex-shrink:0;}
+.fs-tab{flex:1;font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:3px;padding:10px 4px;text-align:center;color:rgba(232,224,216,.4);cursor:pointer;transition:all .2s;border-bottom:2px solid transparent;position:relative;}
+.fs-tab:hover{color:#c0392b;}
+.fs-tab.on{color:#e74c3c;border-bottom-color:#c0392b;background:rgba(192,57,43,.05);}
+.fs-tbadge{position:absolute;top:5px;right:8px;min-width:16px;height:16px;background:#c0392b;border-radius:8px;font-size:9px;display:none;align-items:center;justify-content:center;color:#fff;font-family:'Rajdhani',sans-serif;font-weight:700;padding:0 3px;}
+.fs-tbadge.on{display:flex;}
+.fs-body{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#7b1a13 transparent;}
+.fs-panel{display:none;padding:14px;}
+.fs-panel.on{display:block;}
+.fs-sec{font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:4px;color:rgba(192,57,43,.35);padding:6px 0 8px;border-bottom:1px solid rgba(192,57,43,.08);margin-bottom:10px;}
+.fs-empty{text-align:center;padding:30px 10px;font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:3px;color:rgba(192,57,43,.2);line-height:2;}
+.fs-search{display:flex;gap:8px;margin-bottom:14px;}
+.fs-inp{flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(192,57,43,.2);padding:10px 12px;color:#e8e0d8;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;outline:none;transition:border-color .2s;}
+.fs-inp:focus{border-color:#c0392b;}
+.fs-inp::placeholder{color:rgba(232,224,216,.3);}
+.fs-addbtn{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:2px;padding:10px 14px;background:linear-gradient(135deg,#7b1a13,#c0392b);color:#fff;border:none;cursor:pointer;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);transition:all .2s;}
+.fs-addbtn:hover{box-shadow:0 4px 20px rgba(192,57,43,.5);}
+.fc{background:rgba(22,22,22,.9);border:1px solid rgba(192,57,43,.12);padding:12px 14px;margin-bottom:8px;transition:all .2s;position:relative;overflow:hidden;}
+.fc::after{content:'';position:absolute;top:0;right:0;width:8px;height:8px;background:#c0392b;clip-path:polygon(100% 0,0 0,100% 100%);opacity:.15;transition:opacity .2s;}
+.fc:hover{border-color:rgba(192,57,43,.35);background:rgba(192,57,43,.05);}
+.fc:hover::after{opacity:.6;}
+.fc-top{display:flex;align-items:center;gap:10px;}
+.fc-av{width:34px;height:34px;background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.25);display:flex;align-items:center;justify-content:center;clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);flex-shrink:0;font-size:15px;}
+.fc-inf{flex:1;min-width:0;}
+.fc-nm{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;color:#e74c3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fc-st{font-size:11px;color:rgba(232,224,216,.3);letter-spacing:1px;margin-top:1px;}
+.fc-acts{display:flex;gap:6px;margin-top:9px;}
+.fc-btn{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:2px;padding:7px 10px;border:1px solid rgba(192,57,43,.3);background:transparent;color:#c0392b;cursor:pointer;transition:all .2s;flex:1;text-align:center;}
+.fc-btn:hover{border-color:#c0392b;background:rgba(192,57,43,.08);}
+.fc-btn.pr{background:linear-gradient(135deg,#7b1a13,#c0392b);color:#fff;border:none;clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);}
+.fc-btn.pr:hover{box-shadow:0 3px 14px rgba(192,57,43,.45);}
+.fc-btn.dr{color:rgba(192,57,43,.35);border-color:rgba(192,57,43,.12);font-size:10px;}
+.fc-btn.dr:hover{color:#c0392b;border-color:rgba(192,57,43,.4);}
+.pc{background:rgba(192,57,43,.04);border:1px dashed rgba(192,57,43,.2);padding:11px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.pc-nm{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:2px;color:rgba(232,224,216,.7);}
+.pc-lb{font-size:10px;letter-spacing:2px;color:rgba(192,57,43,.35);margin-top:2px;}
+.pc-btns{display:flex;gap:5px;flex-shrink:0;}
+.pc-ok{font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:2px;padding:5px 10px;background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.3);color:#4caf50;cursor:pointer;transition:all .2s;}
+.pc-ok:hover{background:rgba(76,175,80,.22);}
+.pc-no{font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:2px;padding:5px 10px;background:transparent;border:1px solid rgba(192,57,43,.2);color:rgba(192,57,43,.4);cursor:pointer;transition:all .2s;}
+.pc-no:hover{border-color:#c0392b;color:#c0392b;}
+.ic{background:rgba(192,57,43,.07);border:1px solid rgba(192,57,43,.3);padding:14px 16px;margin-bottom:10px;position:relative;animation:fsSlide .3s ease;}
+@keyframes fsSlide{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+.ic::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:#c0392b;}
+.ic-from{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:3px;color:#e74c3c;margin-bottom:6px;}
+.ic-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.ic-badge{font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:2px;padding:3px 10px;border:1px solid rgba(192,57,43,.3);color:#c0392b;background:rgba(192,57,43,.05);}
+.ic-acts{display:flex;gap:8px;}
+.ic-acc{flex:1;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:3px;padding:9px;background:linear-gradient(135deg,#7b1a13,#c0392b);color:#fff;border:none;cursor:pointer;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);transition:all .2s;}
+.ic-acc:hover{box-shadow:0 4px 20px rgba(192,57,43,.5);}
+.ic-dec{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:2px;padding:9px 14px;background:transparent;border:1px solid rgba(192,57,43,.22);color:rgba(192,57,43,.45);cursor:pointer;transition:all .2s;}
+.ic-dec:hover{border-color:#c0392b;color:#c0392b;}
+/* INVITE MODAL */
+.fs-imo{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.88);backdrop-filter:blur(12px);align-items:center;justify-content:center;}
+.fs-imo.open{display:flex;animation:fsUp .3s ease;}
+@keyframes fsUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fs-im{background:#161616;border:1px solid rgba(192,57,43,.45);padding:40px 38px;max-width:460px;width:90%;position:relative;clip-path:polygon(0 0,calc(100% - 26px) 0,100% 26px,100% 100%,26px 100%,0 calc(100% - 26px));}
+.fs-im::before{content:'';position:absolute;top:0;right:0;width:26px;height:26px;background:#c0392b;clip-path:polygon(100% 0,0 0,100% 100%);opacity:.75;}
+.fs-im-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:5px;color:#e74c3c;margin-bottom:4px;}
+.fs-im-sub{font-size:11px;letter-spacing:3px;color:rgba(232,224,216,.35);margin-bottom:26px;}
+.fs-im-to{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:4px;color:#e8e0d8;border:1px solid rgba(192,57,43,.2);background:rgba(192,57,43,.05);padding:10px 16px;margin-bottom:22px;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);display:flex;align-items:center;gap:10px;}
+.fs-sec-lbl{font-size:11px;font-weight:700;letter-spacing:3px;color:rgba(192,57,43,.55);margin-bottom:10px;}
+/* SIDE */
+.fs-sides{display:flex;gap:8px;margin-bottom:22px;}
+.fs-side{flex:1;padding:14px 8px;border:1px solid rgba(192,57,43,.2);background:transparent;cursor:pointer;transition:all .2s;text-align:center;position:relative;}
+.fs-side::after{content:'';position:absolute;top:0;right:0;width:8px;height:8px;background:#c0392b;clip-path:polygon(100% 0,0 0,100% 100%);opacity:0;transition:opacity .2s;}
+.fs-side:hover{border-color:rgba(192,57,43,.45);background:rgba(192,57,43,.05);}
+.fs-side.on{border-color:#c0392b;background:rgba(192,57,43,.1);}
+.fs-side.on::after{opacity:.7;}
+.fs-side-pc{font-size:26px;display:block;margin-bottom:5px;}
+.fs-side-nm{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:3px;color:rgba(232,224,216,.4);display:block;}
+.fs-side.on .fs-side-nm{color:#e74c3c;}
+/* TIME */
+.fs-times{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:8px;}
+.fs-time{padding:11px 6px;border:1px solid rgba(192,57,43,.2);background:transparent;cursor:pointer;transition:all .2s;text-align:center;}
+.fs-time:hover{border-color:rgba(192,57,43,.45);background:rgba(192,57,43,.05);}
+.fs-time.on{border-color:#c0392b;background:rgba(192,57,43,.1);}
+.fs-time-v{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;color:#e74c3c;display:block;}
+.fs-time-l{font-size:9px;letter-spacing:2px;color:rgba(232,224,216,.35);display:block;margin-top:2px;}
+.fs-time.on .fs-time-l{color:#c0392b;}
+.fs-custom-row{display:flex;align-items:center;gap:8px;margin-top:8px;margin-bottom:20px;}
+.fs-custom-inp{background:rgba(255,255,255,.03);border:1px solid rgba(192,57,43,.2);padding:9px 12px;color:#e8e0d8;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:3px;outline:none;width:75px;text-align:center;transition:border-color .2s;}
+.fs-custom-inp:focus{border-color:#c0392b;}
+.fs-custom-u{font-size:11px;letter-spacing:2px;color:rgba(232,224,216,.35);}
+/* BUTTONS */
+.fs-send-btn{width:100%;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:5px;padding:15px;background:linear-gradient(135deg,#7b1a13,#c0392b,#e74c3c);color:#fff;border:none;cursor:pointer;clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);box-shadow:0 4px 24px rgba(192,57,43,.4);transition:all .25s;}
+.fs-send-btn:hover{box-shadow:0 8px 40px rgba(192,57,43,.65);transform:translateY(-2px);}
+.fs-cancel-btn{width:100%;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:4px;padding:11px;background:transparent;border:1px solid rgba(192,57,43,.22);color:rgba(192,57,43,.45);cursor:pointer;margin-top:8px;transition:all .2s;}
+.fs-cancel-btn:hover{border-color:#c0392b;color:#c0392b;}
+/* WAIT */
+.fs-wait{text-align:center;padding:20px 0 10px;}
+.fs-wait-anim{display:flex;justify-content:center;gap:10px;margin:20px 0 14px;}
+.fs-wd{width:10px;height:10px;background:#c0392b;clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);animation:fsPulse 1.4s infinite;}
+.fs-wd:nth-child(2){animation-delay:.2s}.fs-wd:nth-child(3){animation-delay:.4s}
+.fs-wait-to{font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:4px;color:#e74c3c;margin-bottom:4px;}
+.fs-wait-txt{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:4px;color:rgba(232,224,216,.35);}
+  `;
+  document.head.appendChild(style);
+})();
+
+// ══════════════════════════════════════════════
+//  INJECT HTML
+// ══════════════════════════════════════════════
+(function injectHTML() {
+  var app = document.querySelector('.app');
+  if (!app) { document.body.insertAdjacentHTML('beforeend', buildHTML()); return; }
+  app.insertAdjacentHTML('beforeend', buildHTML());
+})();
+
+function buildHTML() {
+  return `
+<!-- FS TOGGLE -->
+<div class="fs-btn" id="fs-toggle">
+  <div class="fs-notif" id="fs-notif"></div>
+  <span style="font-size:17px">⚔</span>
+  <div class="fs-btn-lbl">ДРУЗЬЯ</div>
+</div>
+
+<!-- FS DRAWER -->
+<div class="fs-drawer" id="fs-drawer">
+  <div class="fs-dh">
+    <div class="fs-dh-title">ДРУЗЬЯ</div>
+    <button class="fs-dh-close" id="fs-dh-close">✕</button>
+  </div>
+  <div class="fs-tabs">
+    <div class="fs-tab on" id="fst-friends">СПИСОК</div>
+    <div class="fs-tab" id="fst-requests">ЗАПРОСЫ<span class="fs-tbadge" id="fs-req-b">0</span></div>
+    <div class="fs-tab" id="fst-invites">ВЫЗОВЫ<span class="fs-tbadge" id="fs-inv-b">0</span></div>
+  </div>
+  <div class="fs-body">
+    <div class="fs-panel on" id="fsp-friends">
+      <div class="fs-sec" style="margin-top:4px">ДОБАВИТЬ ДРУГА</div>
+      <div class="fs-search">
+        <input class="fs-inp" id="fs-add-inp" placeholder="Никнейм игрока..." maxlength="20" autocomplete="off">
+        <button class="fs-addbtn" id="fs-add-btn">+ ДОБАВИТЬ</button>
+      </div>
+      <div class="fs-sec">МОИ ДРУЗЬЯ</div>
+      <div id="fs-friends-list"></div>
+    </div>
+    <div class="fs-panel" id="fsp-requests">
+      <div class="fs-sec">ВХОДЯЩИЕ ЗАПРОСЫ</div>
+      <div id="fs-req-in"></div>
+      <div class="fs-sec" style="margin-top:16px">ИСХОДЯЩИЕ</div>
+      <div id="fs-req-out"></div>
+    </div>
+    <div class="fs-panel" id="fsp-invites">
+      <div class="fs-sec">ВХОДЯЩИЕ ВЫЗОВЫ</div>
+      <div id="fs-inv-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- INVITE MODAL -->
+<div class="fs-imo" id="fs-inv-modal">
+  <div class="fs-im">
+    <div id="fs-inv-form">
+      <div class="fs-im-title">ВЫЗОВ НА ПАРТИЮ</div>
+      <div class="fs-im-sub">НАСТРОЙТЕ УСЛОВИЯ</div>
+      <div class="fs-im-to"><span>⚔</span><span id="fs-inv-toname">ИГРОК</span></div>
+      <div class="fs-sec-lbl">ВЫ ИГРАЕТЕ</div>
+      <div class="fs-sides" style="margin-bottom:20px">
+        <div class="fs-side on" id="fs-sw"><span class="fs-side-pc">♔</span><span class="fs-side-nm">БЕЛЫЕ</span></div>
+        <div class="fs-side" id="fs-sb"><span class="fs-side-pc">♟</span><span class="fs-side-nm">ЧЁРНЫЕ</span></div>
+        <div class="fs-side" id="fs-sr"><span class="fs-side-pc">⚄</span><span class="fs-side-nm">СЛУЧАЙНО</span></div>
+      </div>
+      <div class="fs-sec-lbl">КОНТРОЛЬ ВРЕМЕНИ (МИН)</div>
+      <div class="fs-times">
+        <div class="fs-time" id="fst-1"><span class="fs-time-v">1</span><span class="fs-time-l">ПУЛЯ</span></div>
+        <div class="fs-time" id="fst-3"><span class="fs-time-v">3</span><span class="fs-time-l">БЛИЦ</span></div>
+        <div class="fs-time on" id="fst-10"><span class="fs-time-v">10</span><span class="fs-time-l">РАПИД</span></div>
+        <div class="fs-time" id="fst-15"><span class="fs-time-v">15</span><span class="fs-time-l">РАПИД</span></div>
+        <div class="fs-time" id="fst-5"><span class="fs-time-v">5</span><span class="fs-time-l">БЫСТРАЯ</span></div>
+        <div class="fs-time" id="fst-30"><span class="fs-time-v">30</span><span class="fs-time-l">КЛАССИКА</span></div>
+        <div class="fs-time" id="fst-60"><span class="fs-time-v">60</span><span class="fs-time-l">ДЛИННАЯ</span></div>
+        <div class="fs-time" id="fst-0"><span class="fs-time-v">∞</span><span class="fs-time-l">СВОЁ</span></div>
+      </div>
+      <div class="fs-custom-row" id="fs-custom-row" style="display:none">
+        <input class="fs-custom-inp" id="fs-custom-val" type="number" min="1" max="180" value="20">
+        <span class="fs-custom-u">МИНУТ</span>
+      </div>
+      <button class="fs-send-btn" id="fs-send-btn">⚔ ПОСЛАТЬ ВЫЗОВ</button>
+      <button class="fs-cancel-btn" id="fs-close-btn">ОТМЕНА</button>
+    </div>
+    <div id="fs-inv-wait" style="display:none">
+      <div class="fs-wait">
+        <div class="fs-im-title">ВЫЗОВ ОТПРАВЛЕН</div>
+        <div class="fs-wait-anim"><div class="fs-wd"></div><div class="fs-wd"></div><div class="fs-wd"></div></div>
+        <div class="fs-wait-to" id="fs-wait-to">ИГРОК</div>
+        <div class="fs-wait-txt">ОЖИДАНИЕ ОТВЕТА...</div>
+        <button class="fs-cancel-btn" style="margin-top:24px" id="fs-cancel-inv">ОТОЗВАТЬ ВЫЗОВ</button>
+      </div>
+    </div>
+  </div>
+</div>
+  `;
 }
 
-// ── FRIEND LIST ──
-function renderFriendsList2() {
-  var me = myProfile();
-  var container = document.getElementById('friends-list-container');
-  if (!container || !me) return;
+// ══════════════════════════════════════════════
+//  BIND EVENTS (после вставки HTML)
+// ══════════════════════════════════════════════
+function bindEvents() {
+  // Toggle drawer
+  var toggle = fsEl('fs-toggle');
+  var dclose = fsEl('fs-dh-close');
+  if (toggle) toggle.addEventListener('click', function(e) { e.stopPropagation(); toggleDrawer(); });
+  if (dclose) dclose.addEventListener('click', toggleDrawer);
 
-  var friends = me.friends || [];
-  if (friends.length === 0) {
-    container.innerHTML = '<div class="fd-empty">НЕТ ДРУЗЕЙ<br>ДОБАВЬТЕ ПЕРВОГО</div>';
-    return;
-  }
+  // Tabs
+  ['friends','requests','invites'].forEach(function(t) {
+    var el = fsEl('fst-' + t);
+    if (el) el.addEventListener('click', function() { switchTab(t); });
+  });
 
-  container.innerHTML = '';
-  friends.forEach(function(name) {
-    var fp = getFS(name);
-    var card = document.createElement('div');
-    card.className = 'friend-card';
+  // Add friend
+  var addBtn = fsEl('fs-add-btn');
+  var addInp = fsEl('fs-add-inp');
+  if (addBtn) addBtn.addEventListener('click', sendFriendRequest);
+  if (addInp) addInp.addEventListener('keydown', function(e) { if (e.key==='Enter') sendFriendRequest(); });
 
-    var wins = fp ? (fp.wins || 0) : 0;
-    var losses = fp ? (fp.losses || 0) : 0;
-    var total = fp ? (fp.total || 0) : 0;
+  // Invite modal — side/time selectors
+  fsEl('fs-sw') && fsEl('fs-sw').addEventListener('click', function() { setSide('white'); });
+  fsEl('fs-sb') && fsEl('fs-sb').addEventListener('click', function() { setSide('black'); });
+  fsEl('fs-sr') && fsEl('fs-sr').addEventListener('click', function() { setSide('random'); });
 
-    card.innerHTML = ''
-      + '<div class="fc-top">'
-      +   '<div class="fc-avatar">♟</div>'
-      +   '<div class="fc-info">'
-      +     '<div class="fc-name">' + name.toUpperCase() + '</div>'
-      +     '<div class="fc-stats">' + wins + 'В / ' + losses + 'П · ' + total + ' ПАРТИЙ</div>'
-      +   '</div>'
-      +   '<div class="fc-online offline" title="Оффлайн"></div>'
-      + '</div>'
-      + '<div class="fc-actions">'
-      +   '<button class="fc-btn primary" onclick="openInviteModal(\'' + name + '\')">⚔ ВЫЗВАТЬ</button>'
-      +   '<button class="fc-btn danger" onclick="removeFriend2(\'' + name + '\')">✕ УДАЛИТЬ</button>'
-      + '</div>';
+  [1,3,5,10,15,30,60,0].forEach(function(t) {
+    var el = fsEl('fst-' + t);
+    if (el) el.addEventListener('click', function() { setTime(t); });
+  });
 
-    container.appendChild(card);
+  var sendBtn = fsEl('fs-send-btn');
+  if (sendBtn) sendBtn.addEventListener('click', sendGameInvite);
+
+  var closeBtn = fsEl('fs-close-btn');
+  if (closeBtn) closeBtn.addEventListener('click', closeInvModal);
+
+  var cancelInv = fsEl('fs-cancel-inv');
+  if (cancelInv) cancelInv.addEventListener('click', cancelInvite);
+
+  // Close modal on overlay click
+  var modal = fsEl('fs-inv-modal');
+  if (modal) modal.addEventListener('click', function(e) { if (e.target === modal) closeInvModal(); });
+
+  // Close drawer on outside click
+  document.addEventListener('click', function(e) {
+    var drawer = fsEl('fs-drawer');
+    var toggle2 = fsEl('fs-toggle');
+    var modal2 = fsEl('fs-inv-modal');
+    if (!FS.drawerOpen) return;
+    if (modal2 && modal2.classList.contains('open')) return;
+    if (drawer && !drawer.contains(e.target) && toggle2 && !toggle2.contains(e.target)) {
+      FS.drawerOpen = false;
+      drawer.classList.remove('open');
+    }
   });
 }
 
-// ── FRIEND REQUEST ──
+// ══════════════════════════════════════════════
+//  DRAWER
+// ══════════════════════════════════════════════
+function toggleDrawer() {
+  FS.drawerOpen = !FS.drawerOpen;
+  var d = fsEl('fs-drawer');
+  if (d) d.classList.toggle('open', FS.drawerOpen);
+  if (FS.drawerOpen) renderTab(FS.activeTab);
+}
+
+function switchTab(tab) {
+  FS.activeTab = tab;
+  ['friends','requests','invites'].forEach(function(t) {
+    var te = fsEl('fst-' + t);
+    var pe = fsEl('fsp-' + t);
+    if (te) te.classList.toggle('on', t === tab);
+    if (pe) pe.classList.toggle('on', t === tab);
+  });
+  renderTab(tab);
+}
+
+function renderTab(tab) {
+  if (tab === 'friends')  renderFriends();
+  if (tab === 'requests') renderRequests();
+  if (tab === 'invites')  renderInvites();
+  updateBadges();
+}
+
+// ══════════════════════════════════════════════
+//  RENDER FRIENDS
+// ══════════════════════════════════════════════
+function renderFriends() {
+  var me = fsMe();
+  var c = fsEl('fs-friends-list');
+  if (!c) return;
+  if (!me) { c.innerHTML = '<div class="fs-empty">ВОЙДИТЕ В АККАУНТ</div>'; return; }
+  var friends = me.friends || [];
+  if (!friends.length) { c.innerHTML = '<div class="fs-empty">НЕТ ДРУЗЕЙ<br>ДОБАВЬТЕ ПЕРВОГО</div>'; return; }
+  c.innerHTML = '';
+  friends.forEach(function(name) {
+    var fp = fsGet(name) || {};
+    var el = document.createElement('div');
+    el.className = 'fc';
+    el.innerHTML = ''
+      + '<div class="fc-top">'
+      +   '<div class="fc-av">♟</div>'
+      +   '<div class="fc-inf">'
+      +     '<div class="fc-nm">' + esc(name) + '</div>'
+      +     '<div class="fc-st">' + (fp.wins||0) + 'В / ' + (fp.losses||0) + 'П · ' + (fp.total||0) + ' ПАР.</div>'
+      +   '</div>'
+      + '</div>'
+      + '<div class="fc-acts">'
+      +   '<button class="fc-btn pr fs-invite-btn" data-name="' + esc(name) + '">⚔ ВЫЗВАТЬ</button>'
+      +   '<button class="fc-btn dr fs-remove-btn" data-name="' + esc(name) + '">✕ УДАЛИТЬ</button>'
+      + '</div>';
+    c.appendChild(el);
+  });
+  // Delegate buttons
+  c.querySelectorAll('.fs-invite-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { openInvModal(this.dataset.name); });
+  });
+  c.querySelectorAll('.fs-remove-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { removeFriend(this.dataset.name); });
+  });
+}
+
+// ══════════════════════════════════════════════
+//  RENDER REQUESTS
+// ══════════════════════════════════════════════
+function renderRequests() {
+  var me = fsMe();
+  var cin = fsEl('fs-req-in');
+  var cout = fsEl('fs-req-out');
+  if (!cin || !cout || !me) return;
+
+  var inc = me.friendRequests || [];
+  cin.innerHTML = '';
+  if (!inc.length) {
+    cin.innerHTML = '<div class="fs-empty" style="padding:16px 0">НЕТ ЗАПРОСОВ</div>';
+  } else {
+    inc.forEach(function(name) {
+      var el = document.createElement('div');
+      el.className = 'pc';
+      el.innerHTML = ''
+        + '<div><div class="pc-nm">' + esc(name) + '</div><div class="pc-lb">ХОЧЕТ ДОБАВИТЬ ВАС</div></div>'
+        + '<div class="pc-btns">'
+        +   '<button class="pc-ok fs-acc-req" data-name="' + esc(name) + '">✓</button>'
+        +   '<button class="pc-no fs-dec-req" data-name="' + esc(name) + '">✕</button>'
+        + '</div>';
+      cin.appendChild(el);
+    });
+    cin.querySelectorAll('.fs-acc-req').forEach(function(b) { b.addEventListener('click', function() { acceptReq(this.dataset.name); }); });
+    cin.querySelectorAll('.fs-dec-req').forEach(function(b) { b.addEventListener('click', function() { declineReq(this.dataset.name); }); });
+  }
+
+  var out = me.sentRequests || [];
+  cout.innerHTML = '';
+  if (!out.length) {
+    cout.innerHTML = '<div class="fs-empty" style="padding:16px 0">НЕТ ИСХОДЯЩИХ</div>';
+  } else {
+    out.forEach(function(name) {
+      var el = document.createElement('div');
+      el.className = 'pc';
+      el.style.opacity = '.6';
+      el.innerHTML = ''
+        + '<div><div class="pc-nm">' + esc(name) + '</div><div class="pc-lb">ОЖИДАЕТ ОТВЕТА</div></div>'
+        + '<button class="pc-no fs-cancel-req" data-name="' + esc(name) + '">ОТОЗВАТЬ</button>';
+      cout.appendChild(el);
+    });
+    cout.querySelectorAll('.fs-cancel-req').forEach(function(b) { b.addEventListener('click', function() { cancelReq(this.dataset.name); }); });
+  }
+}
+
+// ══════════════════════════════════════════════
+//  RENDER INVITES
+// ══════════════════════════════════════════════
+function renderInvites() {
+  var me = fsMe();
+  var c = fsEl('fs-inv-list');
+  if (!c || !me) return;
+  var now = Date.now();
+  var invites = (me.gameInvites || []).filter(function(i) { return now - i.ts < 300000; });
+  if (!invites.length) { c.innerHTML = '<div class="fs-empty">НЕТ ВЫЗОВОВ</div>'; return; }
+  c.innerHTML = '';
+  invites.forEach(function(inv) {
+    var sides = {white:'♔ БЕЛЫЕ',black:'♟ ЧЁРНЫЕ',random:'⚄ СЛУЧАЙНО'};
+    var oppSide = inv.side === 'white' ? '♟ ЧЁРНЫЕ' : inv.side === 'black' ? '♔ БЕЛЫЕ' : '⚄ СЛУЧАЙНО';
+    var el = document.createElement('div');
+    el.className = 'ic';
+    el.innerHTML = ''
+      + '<div class="ic-from">⚔ ' + esc(inv.from||'') + ' ВЫЗЫВАЕТ ВАС</div>'
+      + '<div class="ic-row">'
+      +   '<span class="ic-badge">' + (inv.time||10) + ' МИН</span>'
+      +   '<span class="ic-badge">ВЫ: ' + oppSide + '</span>'
+      + '</div>'
+      + '<div class="ic-acts">'
+      +   '<button class="ic-acc fs-acc-inv" data-inv=\'' + safeJson(inv) + '\'>✓ ПРИНЯТЬ</button>'
+      +   '<button class="ic-dec fs-dec-inv" data-id="' + inv.id + '" data-from="' + esc(inv.from||'') + '">ОТКАЗАТЬ</button>'
+      + '</div>';
+    c.appendChild(el);
+  });
+  c.querySelectorAll('.fs-acc-inv').forEach(function(b) {
+    b.addEventListener('click', function() {
+      try { acceptInvite(JSON.parse(this.dataset.inv)); } catch(e) {}
+    });
+  });
+  c.querySelectorAll('.fs-dec-inv').forEach(function(b) {
+    b.addEventListener('click', function() { declineInvite(this.dataset.id, this.dataset.from); });
+  });
+}
+
+// ══════════════════════════════════════════════
+//  BADGES
+// ══════════════════════════════════════════════
+function updateBadges() {
+  var me = fsMe();
+  var req = me ? ((me.friendRequests||[]).length) : 0;
+  var inv = me ? ((me.gameInvites||[]).filter(function(i){return Date.now()-i.ts<300000;}).length) : 0;
+  var rb = fsEl('fs-req-b'); if (rb) { rb.textContent = req; rb.classList.toggle('on', req > 0); }
+  var ib = fsEl('fs-inv-b'); if (ib) { ib.textContent = inv; ib.classList.toggle('on', inv > 0); }
+  var nd = fsEl('fs-notif'); if (nd) nd.classList.toggle('on', req + inv > 0);
+}
+
+// ══════════════════════════════════════════════
+//  FRIEND ACTIONS
+// ══════════════════════════════════════════════
 function sendFriendRequest() {
-  var me = myProfile();
-  if (!me) { showFsToast('ВОЙДИТЕ В АККАУНТ'); return; }
-  var input = document.getElementById('fd-add-input');
-  if (!input) return;
-  var name = input.value.trim();
-  if (!name) { showFsToast('ВВЕДИТЕ ИМЯ'); return; }
-  if (name.toLowerCase() === me.name.toLowerCase()) { showFsToast('ЭТО ВЫ'); return; }
-
-  var target = getFS(name);
-  if (!target) { showFsToast('ИГРОК НЕ НАЙДЕН'); return; }
-
-  // already friends?
-  if ((me.friends || []).some(function(f){ return f.toLowerCase() === name.toLowerCase(); })) {
-    showFsToast('УЖЕ В ДРУЗЬЯХ'); return;
-  }
-  // already sent?
-  if ((me.sentRequests || []).some(function(r){ return r.toLowerCase() === name.toLowerCase(); })) {
-    showFsToast('ЗАПРОС УЖЕ ОТПРАВЛЕН'); return;
-  }
-
-  // Add to my sent
+  var me = fsMe();
+  if (!me) { fsToast('ВОЙДИТЕ В АККАУНТ'); return; }
+  var inp = fsEl('fs-add-inp');
+  var name = inp ? inp.value.trim() : '';
+  if (!name) { fsToast('ВВЕДИТЕ ИМЯ'); return; }
+  if (name.toLowerCase() === me.name.toLowerCase()) { fsToast('ЭТО ВЫ'); return; }
+  var target = fsGet(name);
+  if (!target) { fsToast('ИГРОК НЕ НАЙДЕН'); return; }
+  if ((me.friends||[]).some(function(f){return f.toLowerCase()===name.toLowerCase();})) { fsToast('УЖЕ В ДРУЗЬЯХ'); return; }
+  if ((me.sentRequests||[]).some(function(r){return r.toLowerCase()===name.toLowerCase();})) { fsToast('ЗАПРОС УЖЕ ОТПРАВЛЕН'); return; }
   if (!me.sentRequests) me.sentRequests = [];
   me.sentRequests.push(target.name);
-  saveFS(me);
-
-  // Add to their incoming
+  fsSave(me);
   if (!target.friendRequests) target.friendRequests = [];
   target.friendRequests.push(me.name);
-  saveFS(target);
-
-  input.value = '';
-  showFsToast('✦ ЗАПРОС ОТПРАВЛЕН: ' + name.toUpperCase());
-  renderFriendsDrawer();
-  updateNotifBadges();
+  fsSave(target);
+  if (inp) inp.value = '';
+  fsToast('✦ ЗАПРОС ОТПРАВЛЕН: ' + target.name.toUpperCase());
+  renderFriends();
+  updateBadges();
 }
 
-function renderRequestsList() {
-  var me = myProfile();
-  if (!me) return;
-  var incContainer = document.getElementById('friend-requests-container');
-  var outContainer = document.getElementById('friend-sent-container');
-  if (!incContainer || !outContainer) return;
-
-  var incoming = me.friendRequests || [];
-  if (incoming.length === 0) {
-    incContainer.innerHTML = '<div class="fd-empty" style="padding:20px 0;">НЕТ ЗАПРОСОВ</div>';
-  } else {
-    incContainer.innerHTML = '';
-    incoming.forEach(function(name) {
-      var card = document.createElement('div');
-      card.className = 'pending-card';
-      card.innerHTML = ''
-        + '<div>'
-        +   '<div class="pending-name">' + name.toUpperCase() + '</div>'
-        +   '<div class="pending-label">ХОЧЕТ ДОБАВИТЬ ВАС</div>'
-        + '</div>'
-        + '<div class="pending-btns">'
-        +   '<button class="pend-accept" onclick="acceptFriendRequest(\'' + name + '\')">✓ ПРИНЯТЬ</button>'
-        +   '<button class="pend-decline" onclick="declineFriendRequest(\'' + name + '\')">✕</button>'
-        + '</div>';
-      incContainer.appendChild(card);
-    });
-  }
-
-  var sent = me.sentRequests || [];
-  if (sent.length === 0) {
-    outContainer.innerHTML = '<div class="fd-empty" style="padding:20px 0;">НЕТ ИСХОДЯЩИХ</div>';
-  } else {
-    outContainer.innerHTML = '';
-    sent.forEach(function(name) {
-      var card = document.createElement('div');
-      card.className = 'pending-card';
-      card.style.opacity = '0.65';
-      card.innerHTML = ''
-        + '<div>'
-        +   '<div class="pending-name">' + name.toUpperCase() + '</div>'
-        +   '<div class="pending-label">ОЖИДАЕТ ОТВЕТА</div>'
-        + '</div>'
-        + '<button class="pend-decline" onclick="cancelFriendRequest(\'' + name + '\')">ОТОЗВАТЬ</button>';
-      outContainer.appendChild(card);
-    });
-  }
-}
-
-function acceptFriendRequest(name) {
-  var me = myProfile();
-  if (!me) return;
-  var other = getFS(name);
-  if (!other) { showFsToast('ИГРОК НЕ НАЙДЕН'); return; }
-
-  // Add mutual friendship
+function acceptReq(name) {
+  var me = fsMe(); if (!me) return;
+  var other = fsGet(name); if (!other) return;
   if (!me.friends) me.friends = [];
   if (!other.friends) other.friends = [];
   if (!me.friends.includes(other.name)) me.friends.push(other.name);
   if (!other.friends.includes(me.name)) other.friends.push(me.name);
-
-  // Remove requests
-  me.friendRequests = (me.friendRequests || []).filter(function(r){ return r.toLowerCase() !== name.toLowerCase(); });
-  other.sentRequests = (other.sentRequests || []).filter(function(r){ return r.toLowerCase() !== me.name.toLowerCase(); });
-
-  saveFS(me);
-  saveFS(other);
-  showFsToast('✦ ' + name.toUpperCase() + ' ТЕПЕРЬ ВАШ ДРУГ!');
-  renderFriendsDrawer();
-  updateNotifBadges();
+  me.friendRequests = (me.friendRequests||[]).filter(function(r){return r.toLowerCase()!==name.toLowerCase();});
+  other.sentRequests = (other.sentRequests||[]).filter(function(r){return r.toLowerCase()!==me.name.toLowerCase();});
+  fsSave(me); fsSave(other);
+  fsToast('✦ ' + other.name.toUpperCase() + ' ТЕПЕРЬ ВАШ ДРУГ!');
+  renderRequests(); updateBadges();
 }
 
-function declineFriendRequest(name) {
-  var me = myProfile();
-  if (!me) return;
-  me.friendRequests = (me.friendRequests || []).filter(function(r){ return r.toLowerCase() !== name.toLowerCase(); });
-
-  var other = getFS(name);
-  if (other) {
-    other.sentRequests = (other.sentRequests || []).filter(function(r){ return r.toLowerCase() !== me.name.toLowerCase(); });
-    saveFS(other);
-  }
-  saveFS(me);
-  renderFriendsDrawer();
-  updateNotifBadges();
+function declineReq(name) {
+  var me = fsMe(); if (!me) return;
+  me.friendRequests = (me.friendRequests||[]).filter(function(r){return r.toLowerCase()!==name.toLowerCase();});
+  var other = fsGet(name);
+  if (other) { other.sentRequests = (other.sentRequests||[]).filter(function(r){return r.toLowerCase()!==me.name.toLowerCase();}); fsSave(other); }
+  fsSave(me); renderRequests(); updateBadges();
 }
 
-function cancelFriendRequest(name) {
-  var me = myProfile();
-  if (!me) return;
-  me.sentRequests = (me.sentRequests || []).filter(function(r){ return r.toLowerCase() !== name.toLowerCase(); });
-
-  var other = getFS(name);
-  if (other) {
-    other.friendRequests = (other.friendRequests || []).filter(function(r){ return r.toLowerCase() !== me.name.toLowerCase(); });
-    saveFS(other);
-  }
-  saveFS(me);
-  renderFriendsDrawer();
+function cancelReq(name) {
+  var me = fsMe(); if (!me) return;
+  me.sentRequests = (me.sentRequests||[]).filter(function(r){return r.toLowerCase()!==name.toLowerCase();});
+  var other = fsGet(name);
+  if (other) { other.friendRequests = (other.friendRequests||[]).filter(function(r){return r.toLowerCase()!==me.name.toLowerCase();}); fsSave(other); }
+  fsSave(me); renderRequests();
 }
 
-function removeFriend2(name) {
-  var me = myProfile();
-  if (!me) return;
-  me.friends = (me.friends || []).filter(function(f){ return f.toLowerCase() !== name.toLowerCase(); });
-  var other = getFS(name);
-  if (other) {
-    other.friends = (other.friends || []).filter(function(f){ return f.toLowerCase() !== me.name.toLowerCase(); });
-    saveFS(other);
-  }
-  saveFS(me);
-  showFsToast('УДАЛЕНО ИЗ ДРУЗЕЙ');
-  renderFriendsDrawer();
+function removeFriend(name) {
+  var me = fsMe(); if (!me) return;
+  me.friends = (me.friends||[]).filter(function(f){return f.toLowerCase()!==name.toLowerCase();});
+  var other = fsGet(name);
+  if (other) { other.friends = (other.friends||[]).filter(function(f){return f.toLowerCase()!==me.name.toLowerCase();}); fsSave(other); }
+  fsSave(me); fsToast('УДАЛЕНО ИЗ ДРУЗЕЙ'); renderFriends(); updateBadges();
 }
 
-// ── NOTIFICATIONS ──
-function updateNotifBadges() {
-  var me = myProfile();
-  var reqCount = me ? ((me.friendRequests || []).length) : 0;
-  var invCount = me ? ((me.gameInvites || []).length) : 0;
-
-  var reqBadge = document.getElementById('req-badge');
-  var invBadge = document.getElementById('inv-badge');
-  var notifDot = document.getElementById('friends-notif-dot');
-
-  if (reqBadge) {
-    reqBadge.textContent = reqCount;
-    reqBadge.style.display = reqCount > 0 ? 'flex' : 'none';
-  }
-  if (invBadge) {
-    invBadge.textContent = invCount;
-    invBadge.style.display = invCount > 0 ? 'flex' : 'none';
-  }
-  if (notifDot) {
-    notifDot.classList.toggle('has-notif', reqCount + invCount > 0);
-  }
-}
-
-// ── GAME INVITES ──
-function openInviteModal(targetName) {
+// ══════════════════════════════════════════════
+//  INVITE MODAL
+// ══════════════════════════════════════════════
+function openInvModal(targetName) {
   FS.inviteTarget = targetName;
   FS.inviteSide = 'white';
-  FS.inviteTime = 1;
-
-  var nameEl = document.getElementById('invite-to-name-text');
-  if (nameEl) nameEl.textContent = targetName.toUpperCase();
-  document.getElementById('iw-to-name') && (document.getElementById('iw-to-name').textContent = targetName.toUpperCase());
-
-  // Reset form state
-  document.getElementById('invite-form-view').style.display = '';
-  document.getElementById('invite-waiting-view').style.display = 'none';
-
-  // Reset side selection
-  ['white','black','random'].forEach(function(s) {
-    var el = document.getElementById('side-' + s);
-    if (el) el.classList.toggle('selected', s === 'white');
-  });
-
-  // Reset time selection
-  [1,3,5,10,15,30,60,'custom'].forEach(function(t) {
-    var el = document.getElementById('time-' + t);
-    if (el) el.classList.toggle('selected', t === 1);
-  });
-  var ctr = document.getElementById('custom-time-row');
-  if (ctr) ctr.style.display = 'none';
-
-  // Close drawer, open modal
-  var drawer = document.getElementById('friends-drawer');
-  if (drawer) drawer.classList.remove('open');
+  FS.inviteTime = 10;
+  var tn = fsEl('fs-inv-toname'); if (tn) tn.textContent = targetName.toUpperCase();
+  var wt = fsEl('fs-wait-to'); if (wt) wt.textContent = targetName.toUpperCase();
+  fsEl('fs-inv-form').style.display = '';
+  fsEl('fs-inv-wait').style.display = 'none';
+  setSide('white');
+  setTime(10);
+  // close drawer
   FS.drawerOpen = false;
-
-  var overlay = document.getElementById('invite-modal-overlay');
-  if (overlay) overlay.classList.add('open');
+  var d = fsEl('fs-drawer'); if (d) d.classList.remove('open');
+  // open modal
+  var m = fsEl('fs-inv-modal'); if (m) m.classList.add('open');
 }
 
-function closeInviteModal() {
-  var overlay = document.getElementById('invite-modal-overlay');
-  if (overlay) overlay.classList.remove('open');
+function closeInvModal() {
+  var m = fsEl('fs-inv-modal'); if (m) m.classList.remove('open');
+  stopInvPoll();
   FS.inviteTarget = null;
   FS.pendingInviteId = null;
 }
 
-function selectSide(side) {
-  FS.inviteSide = side;
-  ['white','black','random'].forEach(function(s) {
-    var el = document.getElementById('side-' + s);
-    if (el) el.classList.toggle('selected', s === side);
+function setSide(s) {
+  FS.inviteSide = s;
+  ['white','black','random'].forEach(function(x) {
+    var map = {white:'fs-sw',black:'fs-sb',random:'fs-sr'};
+    var el = fsEl(map[x]); if (el) el.classList.toggle('on', x === s);
   });
 }
 
-function selectTime(t) {
+function setTime(t) {
   FS.inviteTime = t;
-  [1,3,5,10,15,30,60,'custom'].forEach(function(tv) {
-    var el = document.getElementById('time-' + tv);
-    if (el) el.classList.toggle('selected', tv === t);
+  [1,3,5,10,15,30,60,0].forEach(function(x) {
+    var el = fsEl('fst-' + x); if (el) el.classList.toggle('on', x === t);
   });
-  var ctr = document.getElementById('custom-time-row');
-  if (ctr) ctr.style.display = (t === 'custom') ? 'flex' : 'none';
+  var cr = fsEl('fs-custom-row'); if (cr) cr.style.display = (t === 0) ? 'flex' : 'none';
 }
 
 function sendGameInvite() {
-  var me = myProfile();
-  if (!me || !FS.inviteTarget) return;
-
+  var me = fsMe(); if (!me || !FS.inviteTarget) return;
   var timeVal = FS.inviteTime;
-  if (timeVal === 'custom') {
-    var customInput = document.getElementById('custom-time-val');
-    timeVal = customInput ? parseInt(customInput.value) || 10 : 10;
+  if (timeVal === 0) {
+    var cv = fsEl('fs-custom-val'); timeVal = cv ? (parseInt(cv.value)||10) : 10;
   }
-
-  var invite = {
-    id: Date.now() + '_' + Math.random().toString(36).substr(2,5),
-    from: me.name,
-    to: FS.inviteTarget,
-    side: FS.inviteSide,
-    time: timeVal,
-    ts: Date.now(),
-    status: 'pending',
-  };
-
-  FS.pendingInviteId = invite.id;
-
-  // Store in target's profile
-  var target = getFS(FS.inviteTarget);
-  if (!target) { showFsToast('ИГРОК НЕ НАЙДЕН'); return; }
+  var inv = { id: Date.now() + '_' + Math.random().toString(36).substr(2,5), from: me.name, to: FS.inviteTarget, side: FS.inviteSide, time: timeVal, ts: Date.now(), status: 'pending' };
+  FS.pendingInviteId = inv.id;
+  var target = fsGet(FS.inviteTarget);
+  if (!target) { fsToast('ИГРОК НЕ НАЙДЕН'); return; }
   if (!target.gameInvites) target.gameInvites = [];
-  // Remove old invites from same sender
-  target.gameInvites = target.gameInvites.filter(function(i){ return i.from.toLowerCase() !== me.name.toLowerCase(); });
-  target.gameInvites.push(invite);
-  saveFS(target);
-
-  // Store in my pending outgoing
+  target.gameInvites = target.gameInvites.filter(function(i){return i.from.toLowerCase()!==me.name.toLowerCase();});
+  target.gameInvites.push(inv);
+  fsSave(target);
   if (!me.sentInvites) me.sentInvites = [];
-  me.sentInvites = me.sentInvites.filter(function(i){ return i.to.toLowerCase() !== FS.inviteTarget.toLowerCase(); });
-  me.sentInvites.push(invite);
-  saveFS(me);
-
-  // Show waiting screen
-  document.getElementById('invite-form-view').style.display = 'none';
-  document.getElementById('invite-waiting-view').style.display = '';
-
-  showFsToast('⚔ ВЫЗОВ ОТПРАВЛЕН: ' + FS.inviteTarget.toUpperCase());
-  updateNotifBadges();
-
-  // Poll for response (simulate with localStorage cross-tab)
-  startInvitePolling(invite.id);
+  me.sentInvites = me.sentInvites.filter(function(i){return i.to.toLowerCase()!==FS.inviteTarget.toLowerCase();});
+  me.sentInvites.push(inv);
+  fsSave(me);
+  fsEl('fs-inv-form').style.display = 'none';
+  fsEl('fs-inv-wait').style.display = '';
+  fsToast('⚔ ВЫЗОВ ОТПРАВЛЕН: ' + FS.inviteTarget.toUpperCase());
+  startInvPoll(inv.id);
 }
 
-function cancelGameInvite() {
-  var me = myProfile();
-  if (!me || !FS.pendingInviteId) { closeInviteModal(); return; }
-
-  var sentId = FS.pendingInviteId;
-  me.sentInvites = (me.sentInvites || []).filter(function(i){ return i.id !== sentId; });
-  saveFS(me);
-
-  if (FS.inviteTarget) {
-    var target = getFS(FS.inviteTarget);
-    if (target) {
-      target.gameInvites = (target.gameInvites || []).filter(function(i){ return i.id !== sentId; });
-      saveFS(target);
+function cancelInvite() {
+  var me = fsMe();
+  if (me && FS.pendingInviteId) {
+    var id = FS.pendingInviteId;
+    me.sentInvites = (me.sentInvites||[]).filter(function(i){return i.id!==id;});
+    fsSave(me);
+    if (FS.inviteTarget) {
+      var t = fsGet(FS.inviteTarget);
+      if (t) { t.gameInvites = (t.gameInvites||[]).filter(function(i){return i.id!==id;}); fsSave(t); }
     }
   }
-
-  stopInvitePolling();
-  closeInviteModal();
-  showFsToast('ВЫЗОВ ОТОЗВАН');
+  stopInvPoll(); closeInvModal(); fsToast('ВЫЗОВ ОТОЗВАН');
 }
 
-var _invitePollTimer = null;
-
-function startInvitePolling(inviteId) {
-  stopInvitePolling();
-  _invitePollTimer = setInterval(function() {
-    checkInviteResponse(inviteId);
-  }, 1500);
-}
-
-function stopInvitePolling() {
-  if (_invitePollTimer) { clearInterval(_invitePollTimer); _invitePollTimer = null; }
-}
-
-function checkInviteResponse(inviteId) {
-  var me = myProfile();
-  if (!me) return;
-  // Refresh my profile from localStorage (another tab might have updated it)
-  var fresh = getFS(me.name);
-  if (!fresh) return;
-  var sentInvites = fresh.sentInvites || [];
-  var invite = sentInvites.find(function(i){ return i.id === inviteId; });
-  if (!invite) return;
-
-  if (invite.status === 'accepted') {
-    stopInvitePolling();
-    closeInviteModal();
-    // Launch game with invite settings
-    launchFriendGame(invite);
-  } else if (invite.status === 'declined') {
-    stopInvitePolling();
-    closeInviteModal();
-    showFsToast('✕ ' + (invite.to || '').toUpperCase() + ' ОТКЛОНИЛ ВЫЗОВ');
-    // Clean up
-    fresh.sentInvites = sentInvites.filter(function(i){ return i.id !== inviteId; });
-    saveFS(fresh);
-  }
-}
-
-function renderGameInvites() {
-  var me = myProfile();
-  var container = document.getElementById('game-invites-container');
-  if (!container || !me) return;
-
-  var invites = me.gameInvites || [];
-  // Filter out expired (older than 5 min)
-  var now = Date.now();
-  invites = invites.filter(function(i){ return now - i.ts < 5 * 60 * 1000; });
-
-  if (invites.length === 0) {
-    container.innerHTML = '<div class="fd-empty">НЕТ ВХОДЯЩИХ ВЫЗОВОВ</div>';
-    return;
-  }
-
-  container.innerHTML = '';
-  invites.forEach(function(invite) {
-    var sideMap = { white: '♔ БЕЛЫЕ', black: '♟ ЧЁРНЫЕ', random: '⚄ СЛУЧАЙНО' };
-    var opponentSide = invite.side === 'white' ? '♟ ЧЁРНЫЕ' : invite.side === 'black' ? '♔ БЕЛЫЕ' : '⚄ СЛУЧАЙНО';
-    var card = document.createElement('div');
-    card.className = 'invite-card';
-    card.innerHTML = ''
-      + '<div class="invite-from">⚔ ' + (invite.from || '').toUpperCase() + ' ВЫЗЫВАЕТ ВАС</div>'
-      + '<div class="invite-detail-row">'
-      +   '<span class="invite-badge">' + invite.time + ' МИН</span>'
-      +   '<span class="invite-badge">ВЫ: ' + opponentSide + '</span>'
-      + '</div>'
-      + '<div class="invite-actions" style="margin-top:12px">'
-      +   '<button class="invite-accept" onclick="acceptGameInvite(' + JSON.stringify(invite).replace(/"/g,"'") + ')">✓ ПРИНЯТЬ ВЫЗОВ</button>'
-      +   '<button class="invite-decline" onclick="declineGameInvite(\'' + invite.id + '\', \'' + invite.from + '\')">ОТКАЗАТЬ</button>'
-      + '</div>';
-    container.appendChild(card);
-  });
-}
-
-function acceptGameInvite(invite) {
-  var me = myProfile();
-  if (!me) return;
-
-  // Update invite status in sender's profile
-  var sender = getFS(invite.from);
+function acceptInvite(inv) {
+  var me = fsMe(); if (!me) return;
+  // Mark accepted in sender's profile
+  var sender = fsGet(inv.from);
   if (sender) {
-    var si = (sender.sentInvites || []).find(function(i){ return i.id === invite.id; });
-    if (si) {
-      si.status = 'accepted';
-      saveFS(sender);
-    }
+    var si = (sender.sentInvites||[]).find(function(i){return i.id===inv.id;});
+    if (si) { si.status = 'accepted'; fsSave(sender); }
   }
-
   // Remove from my invites
-  me.gameInvites = (me.gameInvites || []).filter(function(i){ return i.id !== invite.id; });
-  saveFS(me);
-
-  // Close drawer
-  toggleFriendsDrawer();
-  updateNotifBadges();
-
-  // Determine my color
-  var mySide = invite.side === 'white' ? 'black' : invite.side === 'black' ? 'white' : (Math.random() < 0.5 ? 'white' : 'black');
-  var theirSide = mySide === 'white' ? 'black' : 'white';
-
-  var timeSeconds = (invite.time || 10) * 60;
-
-  // Start game
-  showFsToast('⚔ ИГРА ПРОТИВ ' + invite.from.toUpperCase() + '!');
-  setTimeout(function() {
-    startFriendGameLocal(
-      theirSide === 'white' ? invite.from : me.name,
-      theirSide === 'black' ? invite.from : me.name,
-      timeSeconds,
-      mySide === 'black'
-    );
-  }, 400);
+  me.gameInvites = (me.gameInvites||[]).filter(function(i){return i.id!==inv.id;});
+  fsSave(me);
+  closeDrawer(); closeInvModal();
+  updateBadges();
+  // Determine colors
+  var mySide = inv.side === 'white' ? 'black' : inv.side === 'black' ? 'white' : (Math.random()<.5?'white':'black');
+  var timeSec = (inv.time||10) * 60;
+  var pW = mySide === 'white' ? me.name : inv.from;
+  var pB = mySide === 'black' ? me.name : inv.from;
+  fsToast('⚔ ИГРА ПРОТИВ ' + inv.from.toUpperCase() + '!');
+  setTimeout(function() { launchGame(pW, pB, timeSec, mySide === 'black'); }, 400);
 }
 
-function declineGameInvite(inviteId, fromName) {
-  var me = myProfile();
-  if (!me) return;
-  me.gameInvites = (me.gameInvites || []).filter(function(i){ return i.id !== inviteId; });
-  saveFS(me);
-
-  // Notify sender
-  var sender = getFS(fromName);
+function declineInvite(id, fromName) {
+  var me = fsMe(); if (!me) return;
+  me.gameInvites = (me.gameInvites||[]).filter(function(i){return i.id!==id;});
+  fsSave(me);
+  var sender = fsGet(fromName);
   if (sender) {
-    var si = (sender.sentInvites || []).find(function(i){ return i.id === inviteId; });
-    if (si) { si.status = 'declined'; saveFS(sender); }
+    var si = (sender.sentInvites||[]).find(function(i){return i.id===id;});
+    if (si) { si.status = 'declined'; fsSave(sender); }
   }
-
-  renderGameInvites();
-  updateNotifBadges();
-  showFsToast('ВЫЗОВ ОТКЛОНЁН');
+  renderInvites(); updateBadges(); fsToast('ВЫЗОВ ОТКЛОНЁН');
 }
 
-function launchFriendGame(invite) {
-  var me = myProfile();
-  if (!me) return;
-  var timeSeconds = (invite.time || 10) * 60;
-  var myActualSide = invite.side;
-  if (myActualSide === 'random') myActualSide = Math.random() < 0.5 ? 'white' : 'black';
-  var oppSide = myActualSide === 'white' ? 'black' : 'white';
-
-  startFriendGameLocal(
-    myActualSide === 'white' ? me.name : invite.to,
-    myActualSide === 'black' ? me.name : invite.to,
-    timeSeconds,
-    myActualSide === 'black'
-  );
+function closeDrawer() {
+  FS.drawerOpen = false;
+  var d = fsEl('fs-drawer'); if (d) d.classList.remove('open');
 }
 
-function startFriendGameLocal(pWhite, pBlack, timeSeconds, flipped) {
-  // Override G timers and start
-  var opts = {
-    pW: pWhite,
-    pB: pBlack,
-    flipped: !!flipped,
-    timeSeconds: timeSeconds || 600,
-  };
-
-  // Patch timers before startGame
-  var origStart = typeof startGame === 'function' ? startGame : null;
-  if (origStart) {
-    startGame(opts);
-    // Override timers after start
-    G.timers = { w: timeSeconds || 600, b: timeSeconds || 600 };
-    updateTimers();
+// ══════════════════════════════════════════════
+//  LAUNCH GAME
+// ══════════════════════════════════════════════
+function launchGame(pW, pB, timeSec, flipped) {
+  if (typeof startGame !== 'function') return;
+  startGame({ pW: pW, pB: pB, flipped: !!flipped });
+  // Override timers
+  if (typeof G !== 'undefined') {
+    G.timers = { w: timeSec, b: timeSec };
+    if (typeof updateTimers === 'function') updateTimers();
   }
 }
 
-// ── AUTO-CHECK for incoming invites (polling localStorage) ──
-var _globalPollTimer = null;
+// ══════════════════════════════════════════════
+//  POLLING
+// ══════════════════════════════════════════════
+function startInvPoll(invId) {
+  stopInvPoll();
+  FS.invitePollTimer = setInterval(function() {
+    var me = fsMe(); if (!me) return;
+    var fresh = fsGet(me.name); if (!fresh) return;
+    var si = (fresh.sentInvites||[]).find(function(i){return i.id===invId;});
+    if (!si) return;
+    if (si.status === 'accepted') {
+      stopInvPoll();
+      // Update memory
+      me.sentInvites = fresh.sentInvites;
+      fsSave(me);
+      closeInvModal();
+      var mySide = si.side === 'random' ? (Math.random()<.5?'white':'black') : si.side;
+      var timeSec = (si.time||10) * 60;
+      var pW = mySide === 'white' ? me.name : si.to;
+      var pB = mySide === 'black' ? me.name : si.to;
+      fsToast('✓ ' + si.to.toUpperCase() + ' ПРИНЯЛ ВЫЗОВ!');
+      setTimeout(function() { launchGame(pW, pB, timeSec, mySide === 'black'); }, 400);
+    } else if (si.status === 'declined') {
+      stopInvPoll();
+      closeInvModal();
+      fsToast('✕ ' + (si.to||'').toUpperCase() + ' ОТКЛОНИЛ ВЫЗОВ');
+      me.sentInvites = (fresh.sentInvites||[]).filter(function(i){return i.id!==invId;});
+      fsSave(me);
+    }
+  }, 2000);
+}
+
+function stopInvPoll() {
+  if (FS.invitePollTimer) { clearInterval(FS.invitePollTimer); FS.invitePollTimer = null; }
+}
 
 function startGlobalPoll() {
-  stopGlobalPoll();
-  _globalPollTimer = setInterval(function() {
-    var me = myProfile();
-    if (!me) return;
-    var fresh = getFS(me.name);
-    if (!fresh) return;
+  if (FS.pollTimer) clearInterval(FS.pollTimer);
+  FS.pollTimer = setInterval(function() {
+    var me = fsMe(); if (!me) return;
+    var fresh = fsGet(me.name); if (!fresh) return;
     var newInvites = fresh.gameInvites || [];
-    var newRequests = fresh.friendRequests || [];
-    var oldInvites = me.gameInvites || [];
-    var oldRequests = me.friendRequests || [];
-
-    var hasNewInvite = newInvites.length > oldInvites.length;
-    var hasNewRequest = newRequests.length > oldRequests.length;
-
-    // Update currentProfile in memory
-    if (typeof currentProfile !== 'undefined') {
-      currentProfile.gameInvites = newInvites;
-      currentProfile.friendRequests = newRequests;
+    var oldCount = (me.gameInvites||[]).length;
+    var newCount = newInvites.filter(function(i){return Date.now()-i.ts<300000;}).length;
+    var oldReqCount = (me.friendRequests||[]).length;
+    var newReqCount = (fresh.friendRequests||[]).length;
+    if (newCount > oldCount) {
+      var latest = newInvites[newInvites.length-1];
+      fsToast('⚔ ' + (latest.from||'').toUpperCase() + ' ВЫЗЫВАЕТ НА ПАРТИЮ!');
+      if (FS.drawerOpen && FS.activeTab==='invites') renderInvites();
     }
-
-    if (hasNewInvite) {
-      var latestInvite = newInvites[newInvites.length - 1];
-      showFsToast('⚔ ' + (latestInvite.from || '').toUpperCase() + ' ВЫЗЫВАЕТ НА ПАРТИЮ!');
-      updateNotifBadges();
-      if (FS.drawerOpen && FS.activeTab === 'invites') renderGameInvites();
+    if (newReqCount > oldReqCount) {
+      var latestR = (fresh.friendRequests||[])[newReqCount-1];
+      if (latestR) fsToast('✦ ' + latestR.toUpperCase() + ' ХОЧЕТ ДОБАВИТЬ ВАС');
     }
-    if (hasNewRequest) {
-      var latestReq = newRequests[newRequests.length - 1];
-      showFsToast('✦ ' + (latestReq || '').toUpperCase() + ' ХОЧЕТ ДОБАВИТЬ ВАС В ДРУЗЬЯ');
-      updateNotifBadges();
-    }
+    updateBadges();
   }, 3000);
 }
 
-function stopGlobalPoll() {
-  if (_globalPollTimer) { clearInterval(_globalPollTimer); _globalPollTimer = null; }
-}
+// ── utils ──
+function esc(s) { return (s||'').replace(/[<>&"']/g, function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c];}); }
+function safeJson(obj) { return JSON.stringify(obj).replace(/'/g, '&#39;').replace(/"/g, '&quot;'); }
 
-// ── TOAST (local, не конфликтует с существующим toast()) ──
-function showFsToast(msg) {
-  if (typeof toast === 'function') { toast(msg); return; }
-  console.log('[FS]', msg);
-}
-
-// ── CLOSE MODAL on overlay click ──
-(function() {
-  var overlay = document.getElementById('invite-modal-overlay');
-  if (overlay) {
-    overlay.addEventListener('click', function(e) {
-      if (e.target === overlay) closeInviteModal();
-    });
-  }
-})();
-
-// ── CLOSE DRAWER on outside click ──
-document.addEventListener('click', function(e) {
-  var drawer = document.getElementById('friends-drawer');
-  var btn = document.getElementById('friends-toggle-btn');
-  if (!drawer || !btn) return;
-  if (FS.drawerOpen && !drawer.contains(e.target) && !btn.contains(e.target)) {
-    var modal = document.getElementById('invite-modal-overlay');
-    if (modal && modal.classList.contains('open')) return;
-    FS.drawerOpen = false;
-    drawer.classList.remove('open');
-  }
-});
-
-// ── INIT: start polling + update badges once profile is ready ──
-function initFriendsSystem() {
-  updateNotifBadges();
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+function init() {
+  bindEvents();
+  updateBadges();
   startGlobalPoll();
 }
 
-// Hook into existing login/profile system
-var _origLoginSubmit = typeof loginSubmit === 'function' ? loginSubmit : null;
-if (_origLoginSubmit) {
-  loginSubmit = function() {
-    _origLoginSubmit();
-    setTimeout(initFriendsSystem, 300);
-  };
+// Хук на логин — запускаем систему после входа
+function hookLogin() {
+  // Используем MutationObserver вместо переопределения функций
+  var loginOverlay = document.getElementById('login-overlay');
+  if (!loginOverlay) return;
+  var observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(m) {
+      if (m.type === 'attributes' && m.attributeName === 'class') {
+        var target = m.target;
+        // Когда overlay скрывается — пользователь залогинился
+        if (!target.classList.contains('open')) {
+          setTimeout(function() { updateBadges(); startGlobalPoll(); }, 600);
+        }
+      }
+    });
+  });
+  observer.observe(loginOverlay, { attributes: true });
 }
 
-// If profile already exists on load
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-      if (typeof currentProfile !== 'undefined' && currentProfile) {
-        initFriendsSystem();
-      }
-    }, 500);
-  });
+  document.addEventListener('DOMContentLoaded', function() { init(); hookLogin(); });
 } else {
-  setTimeout(function() {
-    if (typeof currentProfile !== 'undefined' && currentProfile) {
-      initFriendsSystem();
-    }
-  }, 500);
+  init();
+  hookLogin();
 }
-</script>
-</body>
-</html>
+
+// Экспортируем нужные функции глобально для onclick в HTML
+window.fsFriendsToggle = toggleDrawer;
+
+})(); // конец IIFE
