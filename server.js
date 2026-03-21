@@ -1,5 +1,5 @@
 const http = require('http');
-const https = require('https'); // ✅ FIX #10: добавлен https для self-ping
+const https = require('https');
 const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
@@ -57,7 +57,7 @@ const online = new Map();
 // game rooms: code -> { white, black, name, statsRecorded }
 const rooms = {};
 
-// ✅ FIX #8: Rate limiting — максимум 30 сообщений в секунду на клиента
+// Rate limiting
 const MESSAGE_LIMIT = 30;
 const MESSAGE_WINDOW_MS = 1000;
 
@@ -91,7 +91,6 @@ function getOpponent(room, ws) {
   return null;
 }
 
-// ✅ FIX #3: Явное удаление комнаты после завершения игры
 function closeRoom(code) {
   if (rooms[code]) {
     delete rooms[code];
@@ -140,7 +139,6 @@ wss.on('connection', (ws) => {
   ws._msgWindowStart = Date.now();
 
   ws.on('message', async (raw) => {
-    // ✅ FIX #8: Rate limit проверка
     if (!checkRateLimit(ws)) {
       send(ws, { type: 'error', msg: 'Слишком много запросов' });
       return;
@@ -165,7 +163,7 @@ wss.on('connection', (ws) => {
             player = await Player.create({ name, nameLower: name.toLowerCase() });
           }
           ws.playerName = player.name;
-          online.set(player.name.toLowerCase(), ws); // ✅ всегда lowercase
+          online.set(player.name.toLowerCase(), ws);
           send(ws, {
             type: 'login_ok',
             name: player.name,
@@ -205,7 +203,6 @@ wss.on('connection', (ws) => {
             send(ws, { type: 'error', msg: 'Запрос уже отправлен' }); return;
           }
           if (me.friendRequests.map(n => n.toLowerCase()).includes(target.name.toLowerCase())) {
-            // Автоматически принять
             me.friends.push(target.name);
             me.friendRequests = me.friendRequests.filter(n => n.toLowerCase() !== target.name.toLowerCase());
             await me.save();
@@ -301,7 +298,6 @@ wss.on('connection', (ws) => {
         const fromName = (msg.from || '').trim();
         const fromWs = online.get(fromName.toLowerCase());
 
-        // ✅ FIX #6: Проверяем fromWs перед использованием
         if (!fromWs || fromWs.readyState !== WebSocket.OPEN) {
           send(ws, { type: 'error', msg: 'Игрок уже не в сети' });
           return;
@@ -313,12 +309,13 @@ wss.on('connection', (ws) => {
           ? (Math.random() < 0.5 ? 'white' : 'black')
           : inviterSide;
         const joinerColor = inviterColor === 'white' ? 'black' : 'white';
+        const timeSeconds = (msg.time || 10) * 60;
 
         rooms[code] = {
           white: inviterColor === 'white' ? fromWs : ws,
           black: inviterColor === 'black' ? fromWs : ws,
           name: fromName,
-          statsRecorded: false // ✅ FIX #2: флаг для предотвращения двойной записи
+          statsRecorded: false
         };
 
         fromWs.roomCode = code;
@@ -327,7 +324,7 @@ wss.on('connection', (ws) => {
           type: 'start',
           yourColor: inviterColor,
           opponent: ws.playerName,
-          timeSeconds: (msg.time || 10) * 60
+          timeSeconds
         });
 
         ws.roomCode = code;
@@ -336,7 +333,7 @@ wss.on('connection', (ws) => {
           type: 'start',
           yourColor: joinerColor,
           opponent: fromName,
-          timeSeconds: (msg.time || 10) * 60
+          timeSeconds
         });
 
         console.log(`Friend game: ${fromName} vs ${ws.playerName}, room ${code}`);
@@ -370,7 +367,8 @@ wss.on('connection', (ws) => {
           black: color === 'black' ? ws : null,
           state: null,
           name: msg.name || ws.playerName || 'Игрок',
-          statsRecorded: false // ✅ FIX #2: флаг
+          timeSeconds: (msg.timeSeconds) || 600,
+          statsRecorded: false
         };
         ws.roomCode = code;
         ws.color = color;
@@ -393,29 +391,31 @@ wss.on('connection', (ws) => {
         ws.color = color;
         if (!ws.playerName) ws.playerName = msg.name || 'Гость';
 
+        // ✅ FIX: передаём timeSeconds обоим игрокам
+        const timeSeconds = room.timeSeconds || 600;
+
         send(room.white, {
           type: 'start',
           yourColor: 'white',
-          opponent: room.black === ws ? ws.playerName : room.name
+          opponent: room.black === ws ? ws.playerName : room.name,
+          timeSeconds
         });
         send(room.black, {
           type: 'start',
           yourColor: 'black',
-          opponent: room.white === ws ? ws.playerName : room.name
+          opponent: room.white === ws ? ws.playerName : room.name,
+          timeSeconds
         });
-        console.log(`Room ${code} started`);
+        console.log(`Room ${code} started: ${room.white?.playerName} vs ${room.black?.playerName}`);
         break;
       }
 
       // ── MOVE ──
       case 'move': {
-        // ✅ FIX #9: проверка авторизации
         if (!ws.playerName) return;
         const room = rooms[ws.roomCode];
         if (!room) return;
 
-        // ✅ FIX #5: проверяем что ход делает тот, чья очередь (по цвету)
-        // Базовая защита — проверяем что ws соответствует нужному цвету
         const opp = getOpponent(room, ws);
         if (!opp) return;
 
@@ -436,49 +436,44 @@ wss.on('connection', (ws) => {
           return;
         }
 
+        // ✅ FIX: пересылаем ход сопернику
         send(opp, { type: 'move', from, to, promo: promo || null });
         break;
       }
 
       // ── RESIGN ──
       case 'resign': {
-        // ✅ FIX #9: проверка авторизации
         if (!ws.playerName) return;
         const room = rooms[ws.roomCode];
         if (!room) return;
         const opp = getOpponent(room, ws);
-        send(opp, { type: 'opponent_resigned' });
+        if (opp) send(opp, { type: 'opponent_resigned' });
 
-        // ✅ FIX #2: проверяем флаг statsRecorded
         if (!room.statsRecorded) {
           room.statsRecorded = true;
           if (ws.playerName) await updateStats(ws.playerName, 'loss');
           if (opp && opp.playerName) await updateStats(opp.playerName, 'win');
-          // Отправить обновлённую статистику обоим
           await sendStatsUpdate(ws);
-          await sendStatsUpdate(opp);
+          if (opp) await sendStatsUpdate(opp);
         }
 
-        // ✅ FIX #3: удаляем комнату после завершения
-        closeRoom(ws.roomCode);
+        const code = ws.roomCode;
         ws.roomCode = null;
         if (opp) opp.roomCode = null;
+        closeRoom(code);
         break;
       }
 
-      // ── GAME RESULT (sent by client after checkmate/stalemate) ──
+      // ── GAME RESULT ──
       case 'game_result': {
-        // ✅ FIX #9: проверка авторизации
         if (!ws.playerName || !msg.result) return;
 
         const room = rooms[ws.roomCode];
 
-        // ✅ FIX #2: только если статистика ещё не записана (не было resign)
         if (room && !room.statsRecorded) {
           room.statsRecorded = true;
           await updateStats(ws.playerName, msg.result);
 
-          // Записать статистику сопернику
           const opp = getOpponent(room, ws);
           if (opp && opp.playerName) {
             let oppResult = 'draw';
@@ -490,13 +485,11 @@ wss.on('connection', (ws) => {
 
           await sendStatsUpdate(ws);
 
-          // ✅ FIX #3: удаляем комнату
           const code = ws.roomCode;
           ws.roomCode = null;
           if (opp) opp.roomCode = null;
           closeRoom(code);
         } else if (!room) {
-          // Локальная игра без комнаты — просто записываем
           await updateStats(ws.playerName, msg.result);
           await sendStatsUpdate(ws);
         }
@@ -505,12 +498,11 @@ wss.on('connection', (ws) => {
 
       // ── CHAT ──
       case 'chat': {
-        // ✅ FIX #9: проверка авторизации
         if (!ws.playerName) return;
         const room = rooms[ws.roomCode];
         if (!room) return;
         const opp = getOpponent(room, ws);
-        send(opp, {
+        if (opp) send(opp, {
           type: 'chat',
           msg: (msg.msg || '').slice(0, 200),
           from: ws.playerName
@@ -530,9 +522,8 @@ wss.on('connection', (ws) => {
     if (!code || !rooms[code]) return;
     const room = rooms[code];
     const opp = getOpponent(room, ws);
-    send(opp, { type: 'opponent_left' });
+    if (opp) send(opp, { type: 'opponent_left' });
 
-    // ✅ FIX #3: удаляем комнату через 30 сек после дисконнекта
     setTimeout(() => closeRoom(code), 30000);
   });
 });
@@ -552,7 +543,6 @@ async function updateStats(playerName, result) {
   }
 }
 
-// ✅ НОВАЯ ФУНКЦИЯ: отправить актуальную статистику игроку
 async function sendStatsUpdate(ws) {
   if (!ws || !ws.playerName) return;
   try {
@@ -589,7 +579,6 @@ async function start() {
     console.log(`✅ INFERNUM server запущен на порту ${PORT}`);
   });
 
-  // ✅ FIX #4 + #10: Self-ping с поддержкой HTTPS
   const APP_URL = process.env.RENDER_EXTERNAL_URL;
   if (APP_URL) {
     const isHttps = APP_URL.startsWith('https://');
