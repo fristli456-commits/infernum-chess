@@ -1454,6 +1454,8 @@ function tick(){
 
 function handleClick(r,c){
   if(!G.active)return;
+  // В онлайн-игре запрещаем ходить не своим цветом
+  if(myColor&&G.turn!==myColor[0])return;
   const p=G.board[r][c];
   if(G.sel){
     const mv=G.hints.find(m=>m[0]===r&&m[1]===c);
@@ -1738,12 +1740,12 @@ function wsConnect(cb){
     }
     else if(msg.type==='start'){
       myColor=msg.yourColor;
-      var mn=myColor==='white'?(_creatorName||document.getElementById('cn').value.trim()||'Белые'):(document.getElementById('jn').value.trim()||'Гость');
+      var myName=(currentProfile&&currentProfile.name)||_creatorName||(myColor==='white'?document.getElementById('cn').value.trim():document.getElementById('jn').value.trim())||(myColor==='white'?'Белые':'Чёрные');
       var on=msg.opponent||'Соперник';
       document.querySelectorAll('.overlay').forEach(function(o){o.classList.remove('open');});
       startGame({
-        pW:myColor==='white'?mn:on,
-        pB:myColor==='black'?mn:on,
+        pW:myColor==='white'?myName:on,
+        pB:myColor==='black'?myName:on,
         flipped:myColor==='black',
         timeSeconds:msg.timeSeconds||600
       });
@@ -1751,6 +1753,7 @@ function wsConnect(cb){
     }
     // ✅ FIX #3: промо соперника применяется корректно
     else if(msg.type==='move'){
+      // Применяем ход соперника только когда сейчас НЕ наш ход
       if(G.active&&myColor&&G.turn!==myColor[0])wsApplyMove(msg.from,msg.to,msg.promo||null);
     }
     else if(msg.type==='opponent_resigned'){toast('Соперник сдался!');endGame(myColor[0],'resign');}
